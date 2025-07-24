@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Your Account - UrbanRide</title>
+  <link rel="stylesheet" href="account.css" />
+  <link rel="icon" type="image/png" href="ur.png">
+</head>
+<body>
+  <header class="navbar">
+    <div class="logo">UrbanRide</div>
+    <nav>
+      <a href="#"></a>
+      <a href="#">Your account</a>
+      <a href="booking.html" class="book-now">Book Now</a>
+    </nav>
+  </header>
+
+  <main class="account-section">
+    <h1>Your Account</h1>
+    <p>Enter your mobile number to access your bookings</p>
+
+    <form class="account-form">
+      <input
+        type="text"
+        placeholder="Enter your mobile number"
+        name="mobile"
+        required
+      />
+      <button type="submit" id="viewbtn">View Bookings</button>
+    </form>
+
+
+    <div class="table-wrapper">
+  <table id="bookingsTable">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Guest</th>
+        <th>Phone</th>
+        <th>Email</th>
+        <th>Passengers</th>
+        <th>Pickup</th>
+        <th>Dropoff</th>
+        <th>Address</th>
+        <th>Trip Type</th>
+        <th>Date & Time</th>
+        <th>Vehicle Type</th>
+        <th>Driver</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+</div>
+
+
+
+    <div id="bookingsTableContainer" style="margin-top: 30px;"></div>
+
+
+    <script>
+document.querySelector('button').addEventListener('click', async (e) => {
+  e.preventDefault();
+  const phone = document.querySelector('input[type="tel"], input[type="text"]').value.trim();
+  const tableContainer = document.getElementById('bookingsTableContainer');
+  const tableBody = document.getElementById('tableBody');
+  tableBody.innerHTML = ''; // Clear previous rows
+
+  if (!phone) {
+    tableContainer.innerHTML = '<p style="color: red;">Please enter your mobile number.</p>';
+    return;
+  }
+
+  try {
+    const res = await fetch(`http://localhost:5000/api/bookings/by-phone/${phone}`);
+    const data = await res.json();
+
+    if (data.length === 0) {
+      tableContainer.innerHTML += '<p style="text-align:center; color: grey;">No bookings found for this number.</p>';
+      return;
+    }
+
+    data.forEach(row => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${row.id}</td>
+        <td>${row.guest_name}</td>
+        <td>${row.phone}</td>
+        <td>${row.email}</td>
+        <td>${row.passengers}</td>
+        <td>${row.pickup}</td>
+        <td>${row.dropoff}</td>
+        <td>${row.address}</td>
+        <td>${row.trip_type}</td>
+        <td>${row.date_time}</td>
+        <td>${row.vehicle_type}</td>
+        <td>${row.associated_member}</td>
+      `;
+      tableBody.appendChild(tr);
+    });
+
+  } catch (err) {
+    console.error(err);
+    tableContainer.innerHTML += '<p style="color: red;">Error fetching bookings.</p>';
+  }
+});
+
+</script>
+
+
+
+   
+
+
+
+  </main>
+</body>
+</html>

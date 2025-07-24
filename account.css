@@ -1,0 +1,135 @@
+/* Reset & Base */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #fff;
+  color: #000;
+  padding: 0;
+}
+
+/* Header */
+.navbar {
+  background-color: #000;
+  color: #fff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 30px;
+}
+.navbar .logo {
+  font-size: 1.4rem;
+  font-weight: bold;
+}
+.navbar nav a {
+  color: #fff;
+  text-decoration: none;
+  margin-left: 20px;
+  font-weight: 500;
+}
+.navbar .book-now {
+  background: #fff;
+  color: #000;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-weight: bold;
+}
+
+/* Main Section */
+.account-section {
+  padding: 60px 20px;
+  max-width: 600px;
+  margin: auto;
+  text-align: center;
+}
+.account-section h1 {
+  font-size: 2rem;
+  margin-bottom: 10px;
+}
+.account-section p {
+  margin-bottom: 30px;
+  font-size: 1rem;
+  color: #555;
+}
+
+/* Form */
+.account-form input {
+  width: 100%;
+  padding: 12px;
+  font-size: 1rem;
+  margin-bottom: 20px;
+  border: 2px solid #000;
+  border-radius: 6px;
+}
+.account-form button {
+  width: 100%;
+  padding: 12px;
+  background-color: #000;
+  color: #fff;
+  border: none;
+  font-size: 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.account-form button:hover {
+  opacity: 0.9;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .navbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .navbar nav {
+    margin-top: 10px;
+  }
+  .navbar nav a {
+    display: inline-block;
+    margin: 5px 10px 0 0;
+  }
+}
+
+
+.table-wrapper {
+  width: 100%;
+  overflow-x: fixed;
+  margin-top: 24px;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+#bookingsTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 100px;
+  margin-left: -200px;
+  font-size: 14px;
+  table-layout: auto;
+}
+
+#bookingsTable thead {
+  background-color: #000;
+  color: #fff;
+}
+
+#bookingsTable th,
+#bookingsTable td {
+  padding: 8px 10px;
+  border: 1px solid #ccc;
+  text-align: left;
+  vertical-align: top;
+}
+
+#bookingsTable tbody tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+@media screen and (max-width: 768px) {
+  #bookingsTable {
+    font-size: 12px;
+  }
+}
