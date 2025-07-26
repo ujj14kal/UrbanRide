@@ -1,0 +1,152 @@
+/* Reset & Base */
+body {
+    font-family: 'Inter', sans-serif; /* Consider 'Inter' or 'Montserrat' if importing, otherwise 'Segoe UI' */
+    margin: 0;
+    padding: 0;
+    background: #f8faff; /* Slightly softer background */
+    color: #333; /* Slightly darker text for better contrast */
+    line-height: 1.6; /* Improved readability */
+}
+
+/* Navbar */
+.navbar {
+    background-color: #000;
+    color: white;
+    padding: 18px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2); /* Slightly stronger shadow */
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1); /* Subtle bottom border */
+}
+
+.navbar .logo {
+    font-weight: 700;
+    font-size: 24px; /* Slightly larger logo */
+    letter-spacing: 0.8px; /* Increased letter spacing */
+}
+
+.navbar nav a {
+    margin-left: 28px; /* Slightly more spacing */
+    color: #fff;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s ease, transform 0.2s ease; /* Added transform for a subtle animation */
+}
+
+.navbar nav a:hover {
+    color: #add8e6; /* Lighter blue on hover for more distinction */
+    transform: translateY(-2px); /* Subtle lift on hover */
+}
+
+/* Confirmation Section */
+.confirmation-container {
+    padding: 80px 20px; /* More vertical padding */
+    text-align: center;
+}
+
+.confirmation-container h1 {
+    font-size: 38px; /* Larger, more impactful heading */
+    margin-bottom: 25px;
+    color: #28a745; /* Green for confirmed status */
+    font-weight: 800; /* Bolder font for emphasis */
+    letter-spacing: 0.5px;
+}
+
+.confirmation-container p {
+    font-size: 17px; /* Slightly larger paragraph text */
+    color: #555;
+    max-width: 650px; /* Wider content area for text */
+    margin: 0 auto 35px; /* More margin below paragraphs */
+}
+
+.confirmation-container p strong {
+    color: #222; /* Make specific details bolder */
+}
+
+/* Map */
+#map {
+    width: 100%;
+    height: 500px; /* Slightly taller map */
+    max-width: 1000px; /* Wider map */
+    margin: 40px auto; /* More margin around the map */
+    border-radius: 18px; /* Slightly more rounded corners */
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2); /* Enhanced shadow for depth */
+    border: 2px solid #e0e0e0;
+}
+
+/* Cancel Button */
+#cancelBtn {
+    background-color: #e53935;
+    color: white;
+    border: none;
+    padding: 16px 36px; /* Larger padding for a more prominent button */
+    margin-top: 40px; /* More margin above the button */
+    font-size: 18px; /* Larger font size */
+    border-radius: 12px; /* More rounded corners */
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.3s ease; /* Added transform for hover */
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+#cancelBtn:hover {
+    background-color: #c62828;
+    transform: translateY(-2px); /* Subtle lift on hover */
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); /* Shadow on hover */
+}
+
+/* Legend */
+#legend {
+    margin: 40px auto 30px; /* Adjusted margins */
+    font-size: 15px;
+    text-align: left;
+    max-width: 650px; /* Matches content width */
+    background: #fff;
+    padding: 20px 28px; /* More padding inside */
+    border-radius: 14px; /* Slightly more rounded */
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1); /* Enhanced shadow */
+    border-left: 5px solid #111; /* Slightly thicker border */
+}
+
+#legend h3 {
+    margin-top: 0;
+    font-size: 19px; /* Slightly larger heading */
+    font-weight: 700; /* Bolder */
+    color: #111;
+    margin-bottom: 12px;
+}
+
+#legend .marker {
+    display: inline-block;
+    width: 15px; /* Slightly larger markers */
+    height: 15px;
+    margin-right: 12px; /* More spacing */
+    border-radius: 50%;
+    vertical-align: middle;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2); /* Subtle shadow on markers */
+}
+
+#legend .pickup {
+    background-color: #4caf50;
+}
+
+#legend .dropoff {
+    background-color: #f44336;
+}
+
+#legend .line {
+    display: inline-block;
+    width: 45px; /* Slightly longer line */
+    height: 5px; /* Slightly thicker line */
+    background: #555;
+    margin-left: 10px;
+    vertical-align: middle;
+    border-radius: 2px; /* Slightly rounded line ends */
+}
+
+
+

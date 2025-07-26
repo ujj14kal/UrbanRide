@@ -8,7 +8,6 @@
 html, body {
   height: 100%;
   font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-  overflow-y: scroll;
   background-color: #fff;
   color: #000;
 }
@@ -56,19 +55,84 @@ nav a {
 }
 
 
-/* Main Content */
+/* -------------------------------------
+   Parallax Scrolling Section for #hello
+   ------------------------------------- */
 #hello {
-  background-color: white;
-  padding: 4em 2em;
-  text-align: center;
+    /* Existing base styles from your provided code */
+    padding: 6em 2em;
+    text-align: center;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    overflow: hidden; /* Important to prevent scroll issues with fixed backgrounds */
+
+    /* Parallax properties */
+    background-image: url('bg.png'); /* REPLACE WITH YOUR ACTUAL IMAGE PATH */
+    background-size: cover; /* Ensures the image covers the entire section */
+    background-attachment: fixed; /* THIS IS THE CORE OF THE PARALLAX EFFECT */
+    background-position: center center; /* Centers the image */
+    background-repeat: no-repeat; /* Prevents image tiling */
+
+    /* Optional: Overlay for better text readability on top of the image */
+    position: relative; /* Needed for positioning the overlay */
+    z-index: 1; /* Ensure content is above the overlay */
 }
 
+/* Pseudo-element for the semi-transparent overlay */
+#hello::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.4); /* Dark overlay (adjust opacity as needed) */
+    z-index: -1; /* Place behind the actual content of #hello */
+}
+
+/* Ensure text inside #hello is readable against the dark background/overlay */
+#hello h1,
+#hello p {
+    color: white; /* Light text color for contrast */
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.6); /* Subtle shadow for even better readability */
+}
+
+/* -------------------------------------
+   Parallax Responsive Adjustments
+   ------------------------------------- */
+@media (max-width: 768px) {
+    #hello {
+        /* Disable parallax on most mobile devices for better performance/consistency */
+        background-attachment: scroll;
+        /* You might want to use a smaller, optimized image for mobile, or adjust position */
+        /* background-image: url('path/to/your/mobile-hero-image.jpg'); */
+        background-position: top center; /* Adjust if the main image looks better positioned differently on mobile */
+    }
+
+    #hello::before {
+        /* You can adjust the overlay opacity for mobile if needed */
+        background-color: rgba(0, 0, 0, 0.5); /* Slightly darker overlay for mobile */
+    }
+
+    #hello h1 {
+        font-size: 2.5rem; /* Adjust font size for mobile screens */
+    }
+}
+
+@media (max-width: 480px) {
+    #hello h1 {
+        font-size: 2rem; /* Further adjust for smaller phones */
+    }
+}
 #img1 {
   width: 100%;
   max-width: 600px;
   height: auto;
   margin: 2em auto;
   display: block;
+  border-radius: 20px;
 }
 
 /* Responsive Layout */
@@ -99,11 +163,6 @@ nav a {
     font-size: 1.3em;
   }
 }
-
-
-
-
-
 
 
 body {
@@ -325,6 +384,8 @@ body {
     text-align: center;
   }
 }
+
+
 
 .urbanride-footer {
   background-color: #ffffff;

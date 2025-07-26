@@ -5,10 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Book Your Ride</title>
   <link rel="stylesheet" href="booking.css">
+  <link rel="stylesheet" href="style.css">
   <link rel="icon" type="image/png" href="ur.png">
+  <!-- Google Maps API -->
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBGvVzJu_zA6-ngh8zYuXKABa_CPS6p9B4&libraries=places&callback=initAutocomplete" async defer></script>
 </head>
-<body>
 
+<body>
   <header>UrbanRide - Book Your Ride</header>
 
   <div class="form-container">
@@ -39,11 +42,11 @@
       <div class="form-row">
         <div class="form-group">
           <label for="pickup">Pick-up Location</label>
-          <input type="text" id="pickup" name="pickup" required />
+          <input id="pickup" type="text" name="pickup" required />
         </div>
         <div class="form-group">
           <label for="dropoff">Drop-off Location</label>
-          <input type="text" id="dropoff" name="dropoff" required />
+          <input id="dropoff" type="text" name="dropoff" required />
         </div>
       </div>
 
@@ -62,7 +65,6 @@
           <input type="radio" id="outstation" name="tripType" value="Outstation" />
           <label for="outstation">Outstation</label>
         </div>
-
         <div class="form-group">
           <label for="datetime">Date & Time</label>
           <input type="datetime-local" id="datetime" name="datetime" required />
@@ -80,7 +82,6 @@
             <option value="Tempo Traveller">Tempo Traveller</option>
           </select>
         </div>
-
         <div class="form-group">
           <label for="member">Associated Member</label>
           <select id="member" name="associated_member" required>
@@ -99,82 +100,174 @@
     </form>
   </div>
 
-  <!-- Popup message box -->
-<div id="popupMessage" class="popup-message"></div>
-
+  <div id="popupMessage" class="popup-message"></div>
 
   <script>
-  document.getElementById('bookingForm').addEventListener('submit', async function (e) {
-    e.preventDefault();
+    let pickupCoords = null;
+    let dropoffCoords = null;
 
-    const form = e.target;
+    function initAutocomplete() {
+      const pickupInput = document.getElementById('pickup');
+      const dropoffInput = document.getElementById('dropoff');
 
-    // Get trip type from radio button
-    const tripType = document.querySelector('input[name="tripType"]:checked')?.value;
+      const pickupAutocomplete = new google.maps.places.Autocomplete(pickupInput);
+      const dropoffAutocomplete = new google.maps.places.Autocomplete(dropoffInput);
 
-    // Map vendor name (selected member) to an ID — adjust based on your DB
-    const vendorMap = {
-      "John": 1,
-      "Priya": 2,
-      "Amit": 3,
-      "Other": 4
-    };
-
-    const vendorName = form.member.value;
-    
-
-    const bookingData = {
-      guest_name: form.guestName.value,
-      passengers: parseInt(form.passengers.value),
-      email: form.email.value,
-      phone: form.mobile.value,
-      address: form.address.value,
-      trip_type: tripType,
-      pickup: form.pickup.value,
-      dropoff: form.dropoff.value,
-      date_time: form.datetime.value,
-      vehicle_type: document.getElementById('vehicle').value,
-      associated_member: document.getElementById('member').value,
-    };
-
-    console.log("🚀 Form vehicle_type:", document.getElementById('vehicle').value);
-console.log("🚀 Form associated_member:", document.getElementById('member').value);
-console.log("🚀 Full bookingData:", bookingData);
-
-
-    try {
-      const response = await fetch('http://localhost:5000/api/bookings', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(bookingData)
+      pickupAutocomplete.addListener('place_changed', () => {
+        const place = pickupAutocomplete.getPlace();
+        if (place.geometry) {
+          pickupCoords = {
+            lat: place.geometry.location.lat(),
+            lng: place.geometry.location.lng()
+          };
+        }
       });
 
-      const result = await response.json();
+      dropoffAutocomplete.addListener('place_changed', () => {
+        const place = dropoffAutocomplete.getPlace();
+        if (place.geometry) {
+          dropoffCoords = {
+            lat: place.geometry.location.lat(),
+            lng: place.geometry.location.lng()
+          };
+        }
+      });
+    }
 
-function showPopupMessage(type, text) {
-  const popup = document.getElementById('popupMessage');
-  popup.className = `popup-message ${type}`;
-  popup.textContent = text;
-  popup.style.display = 'block';
-  setTimeout(() => {
-    popup.style.display = 'none';
-  }, 5000);
-}
+    async function getDistanceAndTime() {
+      if (!pickupCoords || !dropoffCoords) return null;
 
-if (response.ok && result.booking_id) {
-  showPopupMessage('success', `✅ Booking successful! ID: ${result.booking_id}`);
-  form.reset();
-} else {
-  showPopupMessage('error', result.message || '❌ Something went wrong.');
-}
-    } catch (err) {
-  console.error(err);
-  showPopupMessage('error', '⚠️ Could not send request. Try again.');
-}
-  });
-</script>
+      const origin = `${pickupCoords.lat},${pickupCoords.lng}`;
+      const destination = `${dropoffCoords.lat},${dropoffCoords.lng}`;
+      const apiKey = "AIzaSyBGvVzJu_zA6-ngh8zYuXKABa_CPS6p9B4";
 
+      const url = `https://corsproxy.io/?https://maps.googleapis.com/maps/api/directions/json?origin=${origin}&destination=${destination}&key=${apiKey}&traffic_model=best_guess&departure_time=now`;
 
-</body></html>
+      try {
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.routes && data.routes.length > 0) {
+          const leg = data.routes[0].legs[0];
+          return {
+            time: leg.duration.text,
+            distance: leg.distance.text
+          };
+        } else {
+          return null;
+        }
+      } catch (err) {
+        console.error('Failed to get directions:', err);
+        return null;
+      }
+    }
+
+    function showPopupMessage(type, text) {
+      const popup = document.getElementById('popupMessage');
+      popup.className = `popup-message ${type}`;
+      popup.textContent = text;
+      popup.style.display = 'block';
+      setTimeout(() => {
+        popup.style.display = 'none';
+      }, 3000);
+    }
+
+    document.getElementById('bookingForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const form = e.target;
+
+      if (!pickupCoords || !dropoffCoords) {
+        showPopupMessage('error', '⚠️ Please select both pickup and dropoff locations.');
+        return;
+      }
+
+      const tripType = document.querySelector('input[name="tripType"]:checked')?.value;
+
+      const bookingData = {
+        guest_name: form.guestName.value,
+        passengers: parseInt(form.passengers.value),
+        email: form.email.value,
+        phone: form.mobile.value,
+        address: form.address.value,
+        trip_type: tripType,
+        pickup: form.pickup.value,
+        dropoff: form.dropoff.value,
+        date_time: form.datetime.value,
+        vehicle_type: form.vehicle.value,
+        associated_member: form.member.value
+      };
+
+      const routeInfo = await getDistanceAndTime();
+      if (routeInfo) {
+        bookingData.distance = routeInfo.distance;
+        bookingData.estimated_time = routeInfo.time;
+      }
+
+      try {
+        const response = await fetch('http://localhost:5000/api/bookings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(bookingData)
+        });
+
+        const result = await response.json();
+
+        if (response.ok && result.booking_id) {
+          showPopupMessage('success', `✅ Booking successful! ID: ${result.booking_id} \nRedirecting...`);
+          form.reset();
+          setTimeout(() => {
+            window.location.href = `confirmation.html?booking_id=${result.booking_id}`;
+          }, 3000);
+        } else {
+          showPopupMessage('error', result.message || '❌ Something went wrong.');
+        }
+      } catch (err) {
+        console.error(err);
+        showPopupMessage('error', '⚠️ Could not send request. Try again.');
+      }
+    });
+  </script>
+
+  <footer class="urbanride-footer">
+    <div class="footer-container">
+      <div class="footer-column">
+        <h4>Company</h4>
+        <ul>
+          <li><a href="#">About us</a></li>
+          <li><a href="#">Our services</a></li>
+          <li><a href="#">Blog</a></li>
+          <li><a href="#">Careers</a></li>
+        </ul>
+      </div>
+      <div class="footer-column">
+        <h4>Products</h4>
+        <ul>
+          <li><a href="#">Ride</a></li>
+          <li><a href="#">Drive</a></li>
+          <li><a href="#">Urban Auto</a></li> 
+          <li><a href="#">Urban Moto</a></li>
+        </ul>
+      </div>
+      <div class="footer-column">
+        <h4>Travel</h4>
+        <ul>
+          <li><a href="#">Airports</a></li>
+          <li><a href="#">Cities</a></li>
+        </ul>
+      </div>
+      <div class="footer-column">
+        <h4>Support</h4>
+        <ul>
+          <li><a href="#">Help Center</a></li>
+          <li><a href="#">Contact us</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p class="copyright">©2025 UrbanRide technologies Inc.</p>
+      <span class="footer-brand">UrbanRide</span>
+    </div>
+  </footer>
+</body>
+</html>
+
