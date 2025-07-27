@@ -58,6 +58,9 @@
 
 
     <div id="bookingsTableContainer" style="margin-top: 30px;"></div>
+    <div class="mobile-cards" id="mobileCardsContainer">
+  <!-- JS will populate this -->
+</div>
 
 
     <script>
@@ -109,6 +112,79 @@ document.querySelector('button').addEventListener('click', async (e) => {
 
 </script>
 
+<script>
+// Populate mobile cards on form submission as well
+document.querySelector('button').addEventListener('click', async (e) => {
+  e.preventDefault();
+  const phone = document.querySelector('input[type="tel"], input[type="text"]').value.trim();
+  const tableContainer = document.getElementById('bookingsTableContainer');
+  const tableBody = document.getElementById('tableBody');
+  const mobileCardsContainer = document.getElementById('mobileCardsContainer');
+
+  tableBody.innerHTML = ''; // Clear previous table rows
+  mobileCardsContainer.innerHTML = ''; // Clear previous cards
+
+  if (!phone) {
+    tableContainer.innerHTML = '<p style="color: red;">Please enter your mobile number.</p>';
+    return;
+  }
+
+  try {
+    const res = await fetch(`http://localhost:5000/api/bookings/by-phone/${phone}`);
+    const data = await res.json();
+
+    if (data.length === 0) {
+      tableContainer.innerHTML += '<p style="text-align:center; color: grey;">No bookings found for this number.</p>';
+      return;
+    }
+
+    // Populate table (for desktop)
+    data.forEach(row => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${row.id}</td>
+        <td>${row.guest_name}</td>
+        <td>${row.phone}</td>
+        <td>${row.email}</td>
+        <td>${row.passengers}</td>
+        <td>${row.pickup}</td>
+        <td>${row.dropoff}</td>
+        <td>${row.address}</td>
+        <td>${row.trip_type}</td>
+        <td>${row.date_time}</td>
+        <td>${row.vehicle_type}</td>
+        <td>${row.associated_member}</td>
+      `;
+      tableBody.appendChild(tr);
+    });
+
+    // Populate cards (for mobile)
+    data.forEach(row => {
+      const card = document.createElement('div');
+      card.className = 'mobile-card';
+      card.innerHTML = `
+        <p><strong>ID:</strong> ${row.id}</p>
+        <p><strong>Guest:</strong> ${row.guest_name}</p>
+        <p><strong>Phone:</strong> ${row.phone}</p>
+        <p><strong>Email:</strong> ${row.email}</p>
+        <p><strong>Passengers:</strong> ${row.passengers}</p>
+        <p><strong>Pickup:</strong> ${row.pickup}</p>
+        <p><strong>Dropoff:</strong> ${row.dropoff}</p>
+        <p><strong>Address:</strong> ${row.address}</p>
+        <p><strong>Trip Type:</strong> ${row.trip_type}</p>
+        <p><strong>Date & Time:</strong> ${row.date_time}</p>
+        <p><strong>Vehicle Type:</strong> ${row.vehicle_type}</p>
+        <p><strong>Driver:</strong> ${row.associated_member}</p>
+      `;
+      mobileCardsContainer.appendChild(card);
+    });
+
+  } catch (err) {
+    console.error(err);
+    tableContainer.innerHTML += '<p style="color: red;">Error fetching bookings.</p>';
+  }
+});
+</script>
 
 
    
