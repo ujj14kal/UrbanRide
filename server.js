@@ -13,7 +13,7 @@ app.use(cors());
 app.use(bodyParser.json());
 
 // ✅ Serve all static files from /public/html
-app.use(express.static(path.join(__dirname, 'public/html')));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // ✅ Default route - send index.html
 app.get('/', (req, res) => {
