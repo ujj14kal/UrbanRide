@@ -1,0 +1,22 @@
+{
+  "name": "urbanride",
+  "version": "1.0.0",
+  "description": "UrbanRide cab booking platform",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "Ujjwal Kalra",
+  "license": "MIT",
+  "dependencies": {
+    "amqplib": "^0.10.3",
+    "dotenv": "^17.2.0",
+    "express": "^4.18.2",
+    "fs": "^0.0.1-security",
+    "mongoose": "^7.6.1",
+    "nodemailer": "^6.9.8",
+    "path": "^0.12.7",
+    "pdfkit": "^0.13.0"
+  }
+}
