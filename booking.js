@@ -27,9 +27,13 @@ router.post('/', async (req, res) => {
     associated_member
   } = req.body;
 
-  const sql = `INSERT INTO rides
-    (guest_name, passengers, email, phone, address, trip_type, pickup, dropoff, date_time, vehicle_type, associated_member, status)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    // FIX: Re-typed SQL query using template literals to eliminate potential hidden syntax errors
+    const sql = `
+        INSERT INTO rides (
+            guest_name, passengers, email, phone, address, trip_type,
+            pickup, dropoff, date_time, vehicle_type, associated_member, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
 
   const values = [
     guest_name, passengers, email, phone, address, trip_type,
@@ -39,7 +43,7 @@ router.post('/', async (req, res) => {
   db.query(sql, values, async (err, result) => {
     if (err) {
       console.error("Booking error:", err);
-      return res.status(500).send("Database error");
+      return res.status(500).send("Database error"); // Still sending plain text, but fix SQL first
     }
 
     const booking_id = result.insertId;
@@ -61,20 +65,20 @@ router.post('/', async (req, res) => {
 
     let conn; // Declare conn outside try block for finally
     try {
-        // --- FIX: Connect to Railway RabbitMQ using environment variable ---
-        const RABBITMQ_URL = process.env.RABBITMQ_URL;
-        if (!RABBITMQ_URL) {
-            console.error("❌ RABBITMQ_URL environment variable is not set. Cannot connect to RabbitMQ.");
-            // Even if RabbitMQ connection fails, we can still respond that booking was saved
-            return res.status(500).send({ message: 'Booking saved, but RabbitMQ URL is missing.' });
-        }
+        // --- FIX: Connect to Railway RabbitMQ using environment variable ---
+        const RABBITMQ_URL = process.env.RABBITMQ_URL;
+        if (!RABBITMQ_URL) {
+            console.error("❌ RABBITMQ_URL environment variable is not set. Cannot connect to RabbitMQ.");
+            // Even if RabbitMQ connection fails, we can still respond that booking was saved
+            return res.status(500).send({ message: 'Booking saved, but RabbitMQ URL is missing.' });
+        }
 
-        conn = await amqp.connect(RABBITMQ_URL); // <--- CORRECTED LINE!
-        const channel = await conn.createChannel();
-        const queue = 'booking_requests'; // Use the correct queue name
+        conn = await amqp.connect(RABBITMQ_URL); // <--- CORRECTED LINE!
+        const channel = await conn.createChannel();
+        const queue = 'booking_requests'; // Use the correct queue name
 
-        await channel.assertQueue(queue, { durable: true });
-        channel.sendToQueue(queue, Buffer.from(JSON.stringify(bookingData)), { persistent: true }); // Use 'queue' variable
+        await channel.assertQueue(queue, { durable: true });
+        channel.sendToQueue(queue, Buffer.from(JSON.stringify(bookingData)), { persistent: true }); // Use 'queue' variable
 
 
       console.log('📤 Sent booking to vendor queue');
@@ -85,12 +89,12 @@ router.post('/', async (req, res) => {
       console.error('❌ Failed to notify vendor via RabbitMQ:', error);
       res.status(500).send({ message: 'Booking saved, but failed to notify vendor.' });
     } finally { // Ensure connection is closed even if there's an error
-        if (conn) {
-            setTimeout(() => {
-                conn.close();
-            }, 500); // Give a little time for message to be sent
-        }
-    }
+        if (conn) {
+            setTimeout(() => {
+                conn.close();
+            }, 500); // Give a little time for message to be sent
+        }
+    }
   });
 });
 
@@ -148,5 +152,4 @@ router.delete('/:booking_id', (req, res) => {
 });
 
 module.exports = router;
-
 
