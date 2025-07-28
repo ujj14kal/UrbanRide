@@ -2,111 +2,45 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Book Your Ride</title>
-  <link rel="stylesheet" href="/css/booking.css">
-  <link rel="stylesheet" href="/css/style.css">
-  <link rel="icon" type="image/png" href="/images/ur.png">
-  <!-- Google Maps API -->
-  
+  <title>UrbanRide Booking</title>
+  <link rel="stylesheet" href="/css/booking.css" />
+  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="icon" href="/images/logo.png" type="image/png">
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBGvVzJu_zA6-ngh8zYuXKABa_CPS6p9B4&libraries=places"></script>
 </head>
-
 <body>
-  <header>UrbanRide - Book Your Ride</header>
-
-  <div class="form-container">
-    <h2>Ride Booking Form</h2>
+  <div class="container">
+    <h1>Book Your Ride</h1>
     <form id="bookingForm">
-      <div class="form-row">
-        <div class="form-group">
-          <label for="guestName">Guest Name</label>
-          <input type="text" id="guestName" name="guestName" required />
-        </div>
-        <div class="form-group">
-          <label for="mobile">Mobile Number</label>
-          <input type="tel" id="mobile" name="mobile" required />
-        </div>
+      <input type="text" name="guestName" placeholder="Guest Name" required />
+      <input type="number" name="passengers" placeholder="Passengers" required min="1" />
+      <input type="email" name="email" placeholder="Email" required />
+      <input type="tel" name="mobile" placeholder="Phone Number" required />
+      <input type="text" name="address" placeholder="Address" required />
+      <input type="text" id="pickup" name="pickup" placeholder="Pickup Location" required />
+      <input type="text" id="dropoff" name="dropoff" placeholder="Dropoff Location" required />
+      <input type="datetime-local" name="datetime" required />
+      <select name="vehicle" required>
+        <option value="">Select Vehicle Type</option>
+        <option value="Sedan">Sedan</option>
+        <option value="SUV">SUV</option>
+        <option value="Tempo Traveller">Tempo Traveller</option>
+      </select>
+      <input type="text" name="member" placeholder="Associated Member" required />
+      <div class="trip-type">
+        <label><input type="radio" name="tripType" value="oneway" checked /> One Way</label>
+        <label><input type="radio" name="tripType" value="roundtrip" /> Round Trip</label>
       </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label for="email">Email ID</label>
-          <input type="email" id="email" name="email" required />
-        </div>
-        <div class="form-group">
-          <label for="passengers">No. of Passengers</label>
-          <input type="number" id="passengers" name="passengers" min="1" required />
-        </div>
-      </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label for="pickup">Pick-up Location</label>
-          <input id="pickup" type="text" name="pickup" required />
-        </div>
-        <div class="form-group">
-          <label for="dropoff">Drop-off Location</label>
-          <input id="dropoff" type="text" name="dropoff" required />
-        </div>
-      </div>
-
-      <div class="form-row">
-        <div class="form-group full-width">
-          <label for="address">Address</label>
-          <textarea id="address" name="address" rows="3" required></textarea>
-        </div>
-      </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label>Trip Type</label>
-          <input type="radio" id="local" name="tripType" value="Local" required />
-          <label for="local">Local</label>
-          <input type="radio" id="outstation" name="tripType" value="Outstation" />
-          <label for="outstation">Outstation</label>
-        </div>
-        <div class="form-group">
-          <label for="datetime">Date & Time</label>
-          <input type="datetime-local" id="datetime" name="datetime" required />
-        </div>
-      </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label for="vehicle">Vehicle Type</label>
-          <select id="vehicle" name="vehicle_type" required>
-            <option value="">Select vehicle</option>
-            <option value="Sedan">Sedan</option>
-            <option value="SUV">SUV</option>
-            <option value="Luxury">Luxury</option>
-            <option value="Tempo Traveller">Tempo Traveller</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="member">Associated Member</label>
-          <select id="member" name="associated_member" required>
-            <option value="">Select member</option>
-            <option value="John">John</option>
-            <option value="Priya">Priya</option>
-            <option value="Amit">Amit</option>
-            <option value="Other">Other</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="form-row">
-        <button type="submit" class="submit-btn">Book Ride</button>
-      </div>
+      <button type="submit">Book Ride</button>
     </form>
+    <div id="popup" class="popup-message"></div>
   </div>
-
-  <div id="popupMessage" class="popup-message"></div>
 
   <script>
     let pickupCoords = null;
     let dropoffCoords = null;
 
-    function initAutocomplete() {
+    function initializeAutocomplete() {
       const pickupInput = document.getElementById('pickup');
       const dropoffInput = document.getElementById('dropoff');
 
@@ -134,38 +68,12 @@
       });
     }
 
-    async function getDistanceAndTime() {
-      if (!pickupCoords || !dropoffCoords) return null;
+    window.onload = initializeAutocomplete;
 
-      const origin = `${pickupCoords.lat},${pickupCoords.lng}`;
-      const destination = `${dropoffCoords.lat},${dropoffCoords.lng}`;
-      const apiKey = "AIzaSyBGvVzJu_zA6-ngh8zYuXKABa_CPS6p9B4";
-
-      const url = `https://corsproxy.io/?https://maps.googleapis.com/maps/api/directions/json?origin=${origin}&destination=${destination}&key=${apiKey}&traffic_model=best_guess&departure_time=now`;
-
-      try {
-        const response = await fetch(url);
-        const data = await response.json();
-
-        if (data.routes && data.routes.length > 0) {
-          const leg = data.routes[0].legs[0];
-          return {
-            time: leg.duration.text,
-            distance: leg.distance.text
-          };
-        } else {
-          return null;
-        }
-      } catch (err) {
-        console.error('Failed to get directions:', err);
-        return null;
-      }
-    }
-
-    function showPopupMessage(type, text) {
-      const popup = document.getElementById('popupMessage');
-      popup.className = `popup-message ${type}`;
-      popup.textContent = text;
+    function showPopupMessage(type, message) {
+      const popup = document.getElementById('popup');
+      popup.textContent = message;
+      popup.className = 'popup-message ' + type;
       popup.style.display = 'block';
       setTimeout(() => {
         popup.style.display = 'none';
@@ -197,14 +105,8 @@
         associated_member: form.member.value
       };
 
-      const routeInfo = await getDistanceAndTime();
-      if (routeInfo) {
-        bookingData.distance = routeInfo.distance;
-        bookingData.estimated_time = routeInfo.time;
-      }
-
       try {
-        const response = await fetch('http://localhost:5000/api/bookings', {
+        const response = await fetch('https://urbanride-backend.up.railway.app/api/bookings', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(bookingData)
@@ -227,49 +129,6 @@
       }
     });
   </script>
-
-  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBGvVzJu_zA6-ngh8zYuXKABa_CPS6p9B4&libraries=places&callback=initAutocomplete" async defer></script>
-
-  <footer class="urbanride-footer">
-    <div class="footer-container">
-      <div class="footer-column">
-        <h4>Company</h4>
-        <ul>
-          <li><a href="#">About us</a></li>
-          <li><a href="#">Our services</a></li>
-          <li><a href="#">Blog</a></li>
-          <li><a href="#">Careers</a></li>
-        </ul>
-      </div>
-      <div class="footer-column">
-        <h4>Products</h4>
-        <ul>
-          <li><a href="#">Ride</a></li>
-          <li><a href="#">Drive</a></li>
-          <li><a href="#">Urban Auto</a></li> 
-          <li><a href="#">Urban Moto</a></li>
-        </ul>
-      </div>
-      <div class="footer-column">
-        <h4>Travel</h4>
-        <ul>
-          <li><a href="#">Airports</a></li>
-          <li><a href="#">Cities</a></li>
-        </ul>
-      </div>
-      <div class="footer-column">
-        <h4>Support</h4>
-        <ul>
-          <li><a href="#">Help Center</a></li>
-          <li><a href="#">Contact us</a></li>
-        </ul>
-      </div>
-    </div>
-    <div class="footer-bottom">
-      <p class="copyright">©2025 UrbanRide technologies Inc.</p>
-      <span class="footer-brand">UrbanRide</span>
-    </div>
-  </footer>
 </body>
 </html>
 
