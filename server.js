@@ -11,7 +11,13 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-app.use('/bookings', bookingRoutes); // ✅ valid route
+// Mount your booking routes
+app.use('/bookings', bookingRoutes);
+
+// Add this root route to handle GET /
+app.get('/', (req, res) => {
+  res.send('UrbanRide backend is live!');
+});
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
