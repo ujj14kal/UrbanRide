@@ -7,11 +7,13 @@
   <link rel="stylesheet" href="/css/booking.css">
   <link rel="stylesheet" href="/css/style.css">
   <link rel="icon" type="image/png" href="/images/ur.png">
-    
 </head>
 
 <body>
-  <header>UrbanRide - Book Your Ride</header>
+  <header class="navbar">     <div class="logo">UrbanRide</div>     <nav>       <a href="/html/index.html">Home</a>
+      <a href="/html/booking.html" class="book-now">Book a New Ride</a>
+    </nav>
+  </header>
 
   <div class="form-container">
     <h2>Ride Booking Form</h2>
@@ -95,13 +97,17 @@
 
       <div class="form-row">
         <button type="submit" class="submit-btn">Book Ride</button>
-        <div id="tripInfo"></div>       </div>
+        <div id="tripInfo"></div>
+      </div>
     </form>
   </div>
 
   <div id="popupMessage" class="popup-message"></div>
 
   <script>
+    // Define your Render backend URL here
+    const RENDER_BACKEND_URL = 'https://urbanride.onrender.com'; // IMPORTANT: Use your actual Render URL
+
     let pickupCoords = null;
     let dropoffCoords = null;
 
@@ -120,8 +126,8 @@
             lat: place.geometry.location.lat(),
             lng: place.geometry.location.lng()
           };
-            // Trigger distance/time calculation if both are set
-            if (dropoffCoords) getDistanceAndTimeAndDisplay();
+            // Trigger distance/time calculation if both are set
+            if (dropoffCoords) getDistanceAndTimeAndDisplay();
         }
       });
 
@@ -132,44 +138,50 @@
             lat: place.geometry.location.lat(),
             lng: place.geometry.location.lng()
           };
-            // Trigger distance/time calculation if both are set
-            if (pickupCoords) getDistanceAndTimeAndDisplay();
+            // Trigger distance/time calculation if both are set
+            if (pickupCoords) getDistanceAndTimeAndDisplay();
         }
       });
     }
 
-    // New function to fetch and display distance/time
-    async function getDistanceAndTimeAndDisplay() {
-        if (!pickupCoords || !dropoffCoords) {
-            document.getElementById('tripInfo').textContent = '';
-            return;
-        }
+    // New function to fetch and display distance/time
+    async function getDistanceAndTimeAndDisplay() {
+        if (!pickupCoords || !dropoffCoords) {
+            document.getElementById('tripInfo').textContent = '';
+            return;
+        }
 
-        const origin = `${pickupCoords.lat},${pickupCoords.lng}`;
-        const destination = `${dropoffCoords.lat},${dropoffCoords.lng}`;
+        const origin = `${pickupCoords.lat},${pickupCoords.lng}`;
+        const destination = `${dropoffCoords.lat},${dropoffCoords.lng}`;
 
-        try {
-            // FIX 1: Call your own backend /directions endpoint
-            const response = await fetch('/directions', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ origin, destination })
-            });
+        try {
+            // FIX 1: Call your own backend /directions endpoint with RENDER_BACKEND_URL
+            const response = await fetch(`${RENDER_BACKEND_URL}/directions`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ origin, destination })
+            });
 
-            const data = await response.json();
+            // Check if the response is actually JSON before parsing
+            if (!response.ok) {
+              const errorText = await response.text();
+              throw new Error(`HTTP error! Status: ${response.status}. Message: ${errorText}`);
+            }
+            
+            const data = await response.json();
 
-            const tripInfoDiv = document.getElementById('tripInfo');
-            if (response.ok) {
-                tripInfoDiv.textContent = `Distance: ${data.distance}, Estimated Time: ${data.duration}`;
-            } else {
-                console.error('Failed to get directions from backend:', data.error || 'Unknown error');
-                tripInfoDiv.textContent = `Error getting trip info: ${data.error || 'Please try again.'}`;
-            }
-        } catch (err) {
-            console.error('Network error fetching directions:', err);
-            document.getElementById('tripInfo').textContent = 'Error fetching trip info.';
-        }
-    }
+            const tripInfoDiv = document.getElementById('tripInfo');
+            if (data && data.distance && data.duration) { // Check for expected data fields
+                tripInfoDiv.textContent = `Distance: ${data.distance}, Estimated Time: ${data.duration}`;
+            } else {
+                console.error('Failed to get directions from backend: Invalid data received', data);
+                tripInfoDiv.textContent = `Error getting trip info: Invalid data.`;
+            }
+        } catch (err) {
+            console.error('Network error fetching directions:', err);
+            document.getElementById('tripInfo').textContent = `Error fetching trip info: ${err.message || 'Please try again.'}`;
+        }
+    }
 
 
     function showPopupMessage(type, text) {
@@ -207,32 +219,34 @@
         associated_member: form.member.value
       };
 
-      // Remove direct call to getDistanceAndTime as it will be part of the backend
-      // or you can call it and add its info to bookingData if needed, but it should be
-      // handled by the backend's /directions endpoint as we updated server.js
-
       try {
-        // FIX 2: Call your own backend /bookings endpoint (using relative path)
-        const response = await fetch('/bookings', { // Changed from 'http://localhost:5000/api/bookings'
+        // FIX 2: Call your own backend /api/bookings endpoint with RENDER_BACKEND_URL
+        const response = await fetch(`${RENDER_BACKEND_URL}/api/bookings`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(bookingData)
         });
 
+        // Check if the response is actually JSON before parsing
+        if (!response.ok) {
+          const errorText = await response.text(); // Read as text to see the HTML
+          throw new Error(`HTTP error! Status: ${response.status}. Message: ${errorText}`);
+        }
+
         const result = await response.json();
 
-        if (response.ok && result.booking_id) {
+        if (result.booking_id) { // Simplified check based on typical success response
           showPopupMessage('success', `✅ Booking successful! ID: ${result.booking_id} \nRedirecting...`);
           form.reset();
           setTimeout(() => {
             window.location.href = `/html/confirmation.html?booking_id=${result.booking_id}`;
           }, 3000);
         } else {
-          showPopupMessage('error', result.message || '❌ Something went wrong.');
+          showPopupMessage('error', result.message || '❌ Something went wrong with booking. Check server logs.');
         }
       } catch (err) {
-        console.error(err);
-        showPopupMessage('error', '⚠️ Could not send request. Try again.');
+        console.error('Error submitting booking:', err);
+        showPopupMessage('error', `⚠️ Could not send request: ${err.message || 'Network error'}. Try again.`);
       }
     });
   </script>
@@ -255,7 +269,7 @@
         <ul>
           <li><a href="#">Ride</a></li>
           <li><a href="#">Drive</a></li>
-          <li><a href="#">Urban Auto</a></li> 
+          <li><a href="#">Urban Auto</a></li>
           <li><a href="#">Urban Moto</a></li>
         </ul>
       </div>
