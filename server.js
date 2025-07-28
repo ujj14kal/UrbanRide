@@ -4,7 +4,7 @@ const dotenv = require('dotenv');
 const bodyParser = require('body-parser');
 const path = require('path');
 
-const bookingRoutes = require('./booking');
+const bookingRoutes = require('./public/js/booking');
 
 dotenv.config();
 
