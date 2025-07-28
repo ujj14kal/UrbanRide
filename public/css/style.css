@@ -69,7 +69,7 @@ nav a {
     overflow: hidden; /* Important to prevent scroll issues with fixed backgrounds */
 
     /* Parallax properties */
-    background-image: url('bg.png'); /* REPLACE WITH YOUR ACTUAL IMAGE PATH */
+    background-image: url('/images/bg.png'); /* REPLACE WITH YOUR ACTUAL IMAGE PATH */
     background-size: cover; /* Ensures the image covers the entire section */
     background-attachment: fixed; /* THIS IS THE CORE OF THE PARALLAX EFFECT */
     background-position: center center; /* Centers the image */

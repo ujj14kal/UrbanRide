@@ -4,9 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Book Your Ride</title>
-  <link rel="stylesheet" href="booking.css">
-  <link rel="stylesheet" href="style.css">
-  <link rel="icon" type="image/png" href="ur.png">
+  <link rel="stylesheet" href="/css/booking.css">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" type="image/png" href="/images/ur.png">
   <!-- Google Maps API -->
   <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBGvVzJu_zA6-ngh8zYuXKABa_CPS6p9B4&libraries=places&callback=initAutocomplete" async defer></script>
 </head>
@@ -216,7 +216,7 @@
           showPopupMessage('success', `✅ Booking successful! ID: ${result.booking_id} \nRedirecting...`);
           form.reset();
           setTimeout(() => {
-            window.location.href = `confirmation.html?booking_id=${result.booking_id}`;
+            window.location.href = `/html/confirmation.html?booking_id=${result.booking_id}`;
           }, 3000);
         } else {
           showPopupMessage('error', result.message || '❌ Something went wrong.');

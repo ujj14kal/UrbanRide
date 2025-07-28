@@ -11,50 +11,49 @@ async function generateAndSendInvoice(booking) {
 
     doc.pipe(stream);
 
-    // 🖼️ Add logo
-    doc.image(path.join(__dirname, 'logo.png'), 50, 30, { width: 100 });
+    // 🖼️ Add logo (updated path)
+    doc.image(path.join(__dirname, 'public', 'images', 'logo.png'), 50, 30, { width: 100 });
 
     // Add vertical space between logo and title
-    doc.moveDown(3);
+    doc.moveDown(4); // Adjust if needed
 
     // 🧾 Title
     doc
       .fontSize(24)
       .fillColor('#222')
-      .text('Invoice', 50, doc.y);
+      .text('UrbanRide Invoice', { align: 'left' });
 
     doc.moveDown(1);
 
-    // 🎨 Light gray rounded background box
-    const boxX = 50;
-    const boxY = doc.y;
-    const boxWidth = 500;
+    // Light gray background box
+    const boxTop = doc.y;
     const boxHeight = 160;
+    const boxWidth = 500;
 
-    doc.save();
+    doc.save(); // Save current state
     doc
-      .roundedRect(boxX, boxY, boxWidth, boxHeight, 8)
+      .rect(50, boxTop, boxWidth, boxHeight)
       .fill('#f5f5f5');
-    doc.restore();
+    doc.restore(); // Restore text fill color
 
-    // ✏️ Text inside the box
-    const textLeft = boxX + 15;
-    let textTop = boxY + 15;
-    const lineGap = 20;
+    // Text inside the box
+    const textLeft = 60;
+    const lineHeight = 20;
+    let textTop = boxTop + 10;
 
     doc
       .fontSize(12)
       .fillColor('#000')
       .text(`Booking ID:        ${booking.id}`, textLeft, textTop);
-    textTop += lineGap;
+    textTop += lineHeight;
     doc.text(`Guest Name:        ${booking.guest_name}`, textLeft, textTop);
-    textTop += lineGap;
+    textTop += lineHeight;
     doc.text(`Phone:             ${booking.phone}`, textLeft, textTop);
-    textTop += lineGap;
+    textTop += lineHeight;
     doc.text(`Pickup Location:   ${booking.pickup}`, textLeft, textTop);
-    textTop += lineGap;
+    textTop += lineHeight;
     doc.text(`Dropoff Location:  ${booking.dropoff}`, textLeft, textTop);
-    textTop += lineGap;
+    textTop += lineHeight;
     doc.text(`Associated Member: ${booking.associated_member}`, textLeft, textTop);
 
     doc.moveDown(6);
@@ -111,4 +110,3 @@ Team UrbanRide`,
 }
 
 module.exports = generateAndSendInvoice;
-
