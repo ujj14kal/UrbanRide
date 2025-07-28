@@ -2,7 +2,7 @@
 require('dotenv').config(); // Load environment variables from .env file
 
 const amqp = require('amqplib');
-const mysql = require('mysql');
+const mysql = require('mysql2'); // <--- IMPORTANT: Changed to mysql2
 const readline = require('readline');
 const generateAndSendInvoice = require('./invoice'); // ⬅️ Invoice module - ensure this file exists
 const fs = require('fs'); // Required for reading SSL CA certificate if you choose Option B for MySQL
@@ -22,8 +22,8 @@ const MYSQL_DATABASE = process.env.MYSQLDATABASE; // Using MYSQLDATABASE from yo
 // --- MySQL SSL Configuration (CHOOSE ONE OPTION BELOW) ---
 let mysqlConfig;
 
-// OPTION A: Disable SSL verification (LESS SECURE - FOR DEVELOPMENT ONLY)
-// This is the easiest way to get it working for local testing.
+// OPTION A (RECOMMENDED FOR mysql2 & Railway): Use SSL but rejectUnauthorized: false
+// mysql2 generally handles caching_sha2_password when SSL is enabled.
 mysqlConfig = {
     host: MYSQL_HOST,
     port: MYSQL_PORT,
@@ -31,12 +31,14 @@ mysqlConfig = {
     password: MYSQL_PASSWORD,
     database: MYSQL_DATABASE,
     ssl: {
-        rejectUnauthorized: false // <--- Allows self-signed certs
-    }
+        rejectUnauthorized: false // <--- This is often enough for mysql2 with Railway's self-signed certs
+    },
+    // IMPORTANT: Remove any authPlugins or authProtocol properties you added for 'mysql'
+    // mysql2 handles the authentication plugin automatically when SSL is configured.
 };
 
 /*
-// OPTION B: Use Railway's CA Certificate (MORE SECURE - RECOMMENDED)
+// OPTION B: Use Railway's CA Certificate (MORE SECURE - If you have the CA cert file)
 // You would also put the path to your CA cert in the .env file if you use this.
 // Example in .env: MYSQL_CA_CERT_PATH=./certs/ca.pem
 const MYSQL_CA_CERT_PATH = process.env.MYSQL_CA_CERT_PATH || './certs/ca.pem'; // Default if not in .env
@@ -61,6 +63,8 @@ try {
 // =========================================================
 
 
+// For mysql2, use .createConnection() or .createPool() for a single connection,
+// or a pool for multiple connections. For vc.js, createConnection is fine.
 const db = mysql.createConnection(mysqlConfig);
 
 db.connect((err) => {
@@ -118,6 +122,7 @@ async function listenForBookings() {
 
                 const bookingId = booking.id;
 
+                // For mysql2, db.query often returns a promise, but the callback style also works.
                 db.query(
                     'UPDATE rides SET status = ? WHERE id = ?',
                     [status, bookingId],
