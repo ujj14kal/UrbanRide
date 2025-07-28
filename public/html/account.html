@@ -1,241 +1,192 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Your Account - UrbanRide</title>
-  <link rel="stylesheet" href="/css/account.css" />
-  <link rel="stylesheet" href="/css/style.css">
-  <link rel="icon" type="image/png" href="/images/ur.png">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Your Account - UrbanRide</title>
+  <link rel="stylesheet" href="/css/account.css" />
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" type="image/png" href="/images/ur.png">
 </head>
 <body>
-  <header class="navbar">
-    <div class="logo">UrbanRide</div>
-    <nav>
-      <a href="#"></a>
-      <a href="#">Your account</a>
-      <a href="/html/booking.html" class="book-now">Book Now</a>
-    </nav>
-  </header>
+  <header class="navbar">
+    <div class="logo">UrbanRide</div>
+    <nav>
+      <a href="/html/index.html">Home</a>       <a href="/html/account.html">Your account</a>       <a href="/html/booking.html" class="book-now">Book Now</a>
+    </nav>
+  </header>
 
-  <main class="account-section">
-    <h1>Your Account</h1>
-    <p>Enter your mobile number to access your bookings</p>
+  <main class="account-section">
+    <h1>Your Account</h1>
+    <p>Enter your mobile number to access your bookings</p>
 
-    <form class="account-form">
-      <input
-        type="text"
-        placeholder="Enter your mobile number"
-        name="mobile"
-        required
-      />
-      <button type="submit" id="viewbtn">View Bookings</button>
-    </form>
+    <form class="account-form">
+      <input
+        type="text"
+        placeholder="Enter your mobile number"
+        name="mobile"
+        required
+      />
+      <button type="submit" id="viewbtn">View Bookings</button>
+    </form>
 
+    <div class="table-wrapper">
+      <table id="bookingsTable">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Guest</th>
+            <th>Phone</th>
+            <th>Email</th>
+            <th>Passengers</th>
+            <th>Pickup</th>
+            <th>Dropoff</th>
+            <th>Address</th>
+            <th>Trip Type</th>
+            <th>Date & Time</th>
+            <th>Vehicle Type</th>
+            <th>Driver</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
 
-    <div class="table-wrapper">
-  <table id="bookingsTable">
-    <thead>
-      <tr>
-        <th>ID</th>
-        <th>Guest</th>
-        <th>Phone</th>
-        <th>Email</th>
-        <th>Passengers</th>
-        <th>Pickup</th>
-        <th>Dropoff</th>
-        <th>Address</th>
-        <th>Trip Type</th>
-        <th>Date & Time</th>
-        <th>Vehicle Type</th>
-        <th>Driver</th>
-      </tr>
-    </thead>
-    <tbody id="tableBody"></tbody>
-  </table>
-</div>
+    <div id="bookingsTableContainer" style="margin-top: 30px;"></div>
+    <div class="mobile-cards" id="mobileCardsContainer">
+          </div>
 
+    <script>
+      // Define your Render backend URL here
+      const RENDER_BACKEND_URL = 'https://urbanride.onrender.com'; // IMPORTANT: Use your actual Render URL
 
+      document.getElementById('viewbtn').addEventListener('click', async (e) => { // Use id for clarity
+        e.preventDefault();
+        const phoneInput = document.querySelector('input[name="mobile"]'); // Target by name for robustness
+        const phone = phoneInput.value.trim();
 
-    <div id="bookingsTableContainer" style="margin-top: 30px;"></div>
-    <div class="mobile-cards" id="mobileCardsContainer">
-  <!-- JS will populate this -->
-</div>
+        const tableContainer = document.getElementById('bookingsTableContainer');
+        const tableBody = document.getElementById('tableBody');
+        const mobileCardsContainer = document.getElementById('mobileCardsContainer');
 
+        tableBody.innerHTML = ''; // Clear previous table rows
+        mobileCardsContainer.innerHTML = ''; // Clear previous cards
+        tableContainer.innerHTML = ''; // Clear messages from previous attempts
 
-    <script>
-document.querySelector('button').addEventListener('click', async (e) => {
-  e.preventDefault();
-  const phone = document.querySelector('input[type="tel"], input[type="text"]').value.trim();
-  const tableContainer = document.getElementById('bookingsTableContainer');
-  const tableBody = document.getElementById('tableBody');
-  tableBody.innerHTML = ''; // Clear previous rows
+        if (!phone) {
+          tableContainer.innerHTML = '<p style="color: red;">Please enter your mobile number.</p>';
+          return;
+        }
 
-  if (!phone) {
-    tableContainer.innerHTML = '<p style="color: red;">Please enter your mobile number.</p>';
-    return;
-  }
+        try {
+          // FIX: Use the RENDER_BACKEND_URL
+          const res = await fetch(`${RENDER_BACKEND_URL}/api/bookings/by-phone/${phone}`);
 
-  try {
-    const res = await fetch(`http://localhost:5000/api/bookings/by-phone/${phone}`);
-    const data = await res.json();
+          if (!res.ok) {
+            const errorText = await res.text(); // Read as text to see if it's HTML or another error
+            throw new Error(`HTTP error! Status: ${res.status}. Message: ${errorText}`);
+          }
 
-    if (data.length === 0) {
-      tableContainer.innerHTML += '<p style="text-align:center; color: grey;">No bookings found for this number.</p>';
-      return;
-    }
+          const data = await res.json();
 
-    data.forEach(row => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${row.id}</td>
-        <td>${row.guest_name}</td>
-        <td>${row.phone}</td>
-        <td>${row.email}</td>
-        <td>${row.passengers}</td>
-        <td>${row.pickup}</td>
-        <td>${row.dropoff}</td>
-        <td>${row.address}</td>
-        <td>${row.trip_type}</td>
-        <td>${row.date_time}</td>
-        <td>${row.vehicle_type}</td>
-        <td>${row.associated_member}</td>
-      `;
-      tableBody.appendChild(tr);
-    });
+          if (data.length === 0) {
+            tableContainer.innerHTML += '<p style="text-align:center; color: grey;">No bookings found for this number.</p>';
+            return;
+          }
 
-  } catch (err) {
-    console.error(err);
-    tableContainer.innerHTML += '<p style="color: red;">Error fetching bookings.</p>';
-  }
-});
+          // Populate table (for desktop)
+          data.forEach(row => {
+            const tr = document.createElement('tr');
+            // Ensure all row.properties exist or default to '' to prevent 'undefined'
+            tr.innerHTML = `
+              <td>${row.id || ''}</td>
+              <td>${row.guest_name || ''}</td>
+              <td>${row.phone || ''}</td>
+              <td>${row.email || ''}</td>
+              <td>${row.passengers || ''}</td>
+              <td>${row.pickup || ''}</td>
+              <td>${row.dropoff || ''}</td>
+              <td>${row.address || ''}</td>
+              <td>${row.trip_type || ''}</td>
+              <td>${row.date_time ? new Date(row.date_time).toLocaleString() : ''}</td>
+              <td>${row.vehicle_type || ''}</td>
+              <td>${row.associated_member || ''}</td>
+            `;
+            tableBody.appendChild(tr);
+          });
 
-</script>
+          // Populate cards (for mobile)
+          data.forEach(row => {
+            const card = document.createElement('div');
+            card.className = 'mobile-card';
+            card.innerHTML = `
+              <p><strong>ID:</strong> ${row.id || ''}</p>
+              <p><strong>Guest:</strong> ${row.guest_name || ''}</p>
+              <p><strong>Phone:</strong> ${row.phone || ''}</p>
+              <p><strong>Email:</strong> ${row.email || ''}</p>
+              <p><strong>Passengers:</strong> ${row.passengers || ''}</p>
+              <p><strong>Pickup:</strong> ${row.pickup || ''}</p>
+              <p><strong>Dropoff:</strong> ${row.dropoff || ''}</p>
+              <p><strong>Address:</strong> ${row.address || ''}</p>
+              <p><strong>Trip Type:</strong> ${row.trip_type || ''}</p>
+              <p><strong>Date & Time:</strong> ${row.date_time ? new Date(row.date_time).toLocaleString() : ''}</p>
+              <p><strong>Vehicle Type:</strong> ${row.vehicle_type || ''}</p>
+              <p><strong>Driver:</strong> ${row.associated_member || ''}</p>
+            `;
+            mobileCardsContainer.appendChild(card);
+          });
 
-<script>
-// Populate mobile cards on form submission as well
-document.querySelector('button').addEventListener('click', async (e) => {
-  e.preventDefault();
-  const phone = document.querySelector('input[type="tel"], input[type="text"]').value.trim();
-  const tableContainer = document.getElementById('bookingsTableContainer');
-  const tableBody = document.getElementById('tableBody');
-  const mobileCardsContainer = document.getElementById('mobileCardsContainer');
+        } catch (err) {
+          console.error('Error fetching bookings:', err);
+          tableContainer.innerHTML += `<p style="color: red;">Error fetching bookings: ${err.message || 'Network error'}.</p>`;
+        }
+      });
+    </script>
 
-  tableBody.innerHTML = ''; // Clear previous table rows
-  mobileCardsContainer.innerHTML = ''; // Clear previous cards
+    <footer class="urbanride-footer">
+      <div class="footer-container">
+        <div class="footer-column">
+          <h4>Company</h4>
+          <ul>
+            <li><a href="#">About us</a></li>
+            <li><a href="#">Our services</a></li>
+            <li><a href="#">Blog</a></li>
+            <li><a href="#">Careers</a></li>
+          </ul>
+        </div>
 
-  if (!phone) {
-    tableContainer.innerHTML = '<p style="color: red;">Please enter your mobile number.</p>';
-    return;
-  }
+        <div class="footer-column">
+          <h4>Products</h4>
+          <ul>
+            <li><a href="#">Ride</a></li>
+            <li><a href="#">Drive</a></li>
+            <li><a href="#">Urban Auto</a></li>
+            <li><a href="#">Urban Moto</a></li>
+          </ul>
+        </div>
 
-  try {
-    const res = await fetch(`http://localhost:5000/api/bookings/by-phone/${phone}`);
-    const data = await res.json();
+        <div class="footer-column">
+          <h4>Travel</h4>
+          <ul>
+            <li><a href="#">Airports</a></li>
+            <li><a href="#">Cities</a></li>
+          </ul>
+        </div>
 
-    if (data.length === 0) {
-      tableContainer.innerHTML += '<p style="text-align:center; color: grey;">No bookings found for this number.</p>';
-      return;
-    }
+        <div class="footer-column">
+          <h4>Support</h4>
+          <ul>
+            <li><a href="#">Help Center</a></li>
+            <li><a href="#">Contact us</a></li>
+          </ul>
+        </div>
+      </div>
 
-    // Populate table (for desktop)
-    data.forEach(row => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${row.id}</td>
-        <td>${row.guest_name}</td>
-        <td>${row.phone}</td>
-        <td>${row.email}</td>
-        <td>${row.passengers}</td>
-        <td>${row.pickup}</td>
-        <td>${row.dropoff}</td>
-        <td>${row.address}</td>
-        <td>${row.trip_type}</td>
-        <td>${row.date_time}</td>
-        <td>${row.vehicle_type}</td>
-        <td>${row.associated_member}</td>
-      `;
-      tableBody.appendChild(tr);
-    });
-
-    // Populate cards (for mobile)
-    data.forEach(row => {
-      const card = document.createElement('div');
-      card.className = 'mobile-card';
-      card.innerHTML = `
-        <p><strong>ID:</strong> ${row.id}</p>
-        <p><strong>Guest:</strong> ${row.guest_name}</p>
-        <p><strong>Phone:</strong> ${row.phone}</p>
-        <p><strong>Email:</strong> ${row.email}</p>
-        <p><strong>Passengers:</strong> ${row.passengers}</p>
-        <p><strong>Pickup:</strong> ${row.pickup}</p>
-        <p><strong>Dropoff:</strong> ${row.dropoff}</p>
-        <p><strong>Address:</strong> ${row.address}</p>
-        <p><strong>Trip Type:</strong> ${row.trip_type}</p>
-        <p><strong>Date & Time:</strong> ${row.date_time}</p>
-        <p><strong>Vehicle Type:</strong> ${row.vehicle_type}</p>
-        <p><strong>Driver:</strong> ${row.associated_member}</p>
-      `;
-      mobileCardsContainer.appendChild(card);
-    });
-
-  } catch (err) {
-    console.error(err);
-    tableContainer.innerHTML += '<p style="color: red;">Error fetching bookings.</p>';
-  }
-});
-</script>
-
-
-   
-<footer class="urbanride-footer">
-  <div class="footer-container">
-    <div class="footer-column">
-      <h4>Company</h4>
-      <ul>
-        <li><a href="#">About us</a></li>
-        <li><a href="#">Our services</a></li>
-        <li><a href="#">Blog</a></li>
-        <li><a href="#">Careers</a></li>
-      </ul>
-    </div>
-
-    <div class="footer-column">
-      <h4>Products</h4>
-      <ul>
-        <li><a href="#">Ride</a></li>
-        <li><a href="#">Drive</a></li>
-        <li><a href="#">Urban Auto</a></li> 
-        <li><a href="#">Urban Moto</a></li>
-      </ul>
-    </div>
-
-    <div class="footer-column">
-      <h4>Travel</h4>
-      <ul>
-        <li><a href="#">Airports</a></li>
-        <li><a href="#">Cities</a></li>
-      </ul>
-    </div>
-
-    <div class="footer-column">
-      <h4>Support</h4>
-      <ul>
-        <li><a href="#">Help Center</a></li>
-        <li><a href="#">Contact us</a></li>
-      </ul>
-    </div>
-  </div>
-
-  <div class="footer-bottom">
-    <p class="copyright">©2025 UrbanRide technologies Inc.</p>
-    <span class="footer-brand">UrbanRide</span>
-  </div>
-</footer>
-
-
-
-
-  </main>
+      <div class="footer-bottom">
+        <p class="copyright">©2025 UrbanRide technologies Inc.</p>
+        <span class="footer-brand">UrbanRide</span>
+      </div>
+    </footer>
+  </main>
 </body>
 </html>
