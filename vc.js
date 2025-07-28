@@ -1,98 +1,170 @@
+// At the very top of your vc.js file
+require('dotenv').config(); // Load environment variables from .env file
+
 const amqp = require('amqplib');
 const mysql = require('mysql');
 const readline = require('readline');
-const generateAndSendInvoice = require('./invoice'); // ⬅️ Invoice module
+const generateAndSendInvoice = require('./invoice'); // ⬅️ Invoice module - ensure this file exists
+const fs = require('fs'); // Required for reading SSL CA certificate if you choose Option B for MySQL
 
-const queue = 'booking_requests';
+const queue = 'booking_requests'; // The RabbitMQ queue name
 
-// 🔌 MySQL connection setup (update if needed)
-const db = mysql.createConnection({
-  host: 'localhost',
-  user: 'root',
-  password: 'Ujj$4193',
-  database: 'urbanride',
-});
+// =========================================================
+// 🔌 MySQL connection setup for Railway (using .env)
+// ---------------------------------------------------------
+// Access credentials from process.env
+const MYSQL_HOST = process.env.MYSQLHOST;
+const MYSQL_PORT = parseInt(process.env.MYSQLPORT, 10); // Port should be a number
+const MYSQL_USER = process.env.MYSQLUSER;
+const MYSQL_PASSWORD = process.env.MYSQLPASSWORD;
+const MYSQL_DATABASE = process.env.MYSQLDATABASE; // Using MYSQLDATABASE from your .env
+
+// --- MySQL SSL Configuration (CHOOSE ONE OPTION BELOW) ---
+let mysqlConfig;
+
+// OPTION A: Disable SSL verification (LESS SECURE - FOR DEVELOPMENT ONLY)
+// This is the easiest way to get it working for local testing.
+mysqlConfig = {
+    host: MYSQL_HOST,
+    port: MYSQL_PORT,
+    user: MYSQL_USER,
+    password: MYSQL_PASSWORD,
+    database: MYSQL_DATABASE,
+    ssl: {
+        rejectUnauthorized: false // <--- Allows self-signed certs
+    }
+};
+
+/*
+// OPTION B: Use Railway's CA Certificate (MORE SECURE - RECOMMENDED)
+// You would also put the path to your CA cert in the .env file if you use this.
+// Example in .env: MYSQL_CA_CERT_PATH=./certs/ca.pem
+const MYSQL_CA_CERT_PATH = process.env.MYSQL_CA_CERT_PATH || './certs/ca.pem'; // Default if not in .env
+try {
+    const caCert = fs.readFileSync(MYSQL_CA_CERT_PATH);
+    mysqlConfig = {
+        host: MYSQL_HOST,
+        port: MYSQL_PORT,
+        user: MYSQL_USER,
+        password: MYSQL_PASSWORD,
+        database: MYSQL_DATABASE,
+        ssl: {
+            ca: caCert
+        }
+    };
+} catch (error) {
+    console.error(`❌ Error reading CA certificate at ${MYSQL_CA_CERT_PATH}:`, error.message);
+    console.error('Please ensure the CA certificate file exists and the path is correct.');
+    process.exit(1);
+}
+*/
+// =========================================================
+
+
+const db = mysql.createConnection(mysqlConfig);
 
 db.connect((err) => {
-  if (err) {
-    console.error('❌ MySQL connection failed:', err);
-    process.exit(1);
-  }
-  console.log('✅ Connected to MySQL');
+    if (err) {
+        console.error('❌ MySQL connection failed:', err);
+        process.exit(1); // Exit if DB connection fails
+    }
+    console.log('✅ Connected to Railway MySQL');
 });
 
+// =========================================================
+// 🔗 RabbitMQ connection setup for Railway (using .env)
+// ---------------------------------------------------------
+// Access RABBITMQ_URL from process.env
+const RABBITMQ_URL = process.env.RABBITMQ_URL;
+
+if (!RABBITMQ_URL) {
+    console.error("❌ RABBITMQ_URL environment variable is not set.");
+    console.error("Please ensure RABBITMQ_URL is present in your .env file with the correct connection string.");
+    process.exit(1); // Exit if RabbitMQ URL is missing
+}
+
+// =========================================================
+
 async function listenForBookings() {
-  const connection = await amqp.connect('amqp://localhost');
-  const channel = await connection.createChannel();
-  await channel.assertQueue(queue, { durable: true });
+    let connection;
+    try {
+        // Connect to Railway RabbitMQ using the URL from .env
+        connection = await amqp.connect(RABBITMQ_URL);
+        const channel = await connection.createChannel();
+        await channel.assertQueue(queue, { durable: true });
 
-  console.log('🔔 Waiting for bookings in queue:', queue);
+        console.log('🔔 Waiting for bookings in queue:', queue);
 
-  channel.consume(queue, async (msg) => {
-    const booking = JSON.parse(msg.content.toString());
-    console.log('\n📦 Received booking:\n', booking);
+        channel.consume(queue, async (msg) => {
+            const booking = JSON.parse(msg.content.toString());
+            console.log('\n📦 Received booking:\n', booking);
 
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout,
-    });
+            const rl = readline.createInterface({
+                input: process.stdin,
+                output: process.stdout,
+            });
 
-    rl.question('🛠️ Vendor decision (accept / reject / open_market): ', (decisionRaw) => {
-      const decision = decisionRaw.trim().toLowerCase();
+            rl.question('🛠️ Vendor decision (accept / reject / open_market): ', (decisionRaw) => {
+                const decision = decisionRaw.trim().toLowerCase();
 
-      if (!['accept', 'reject', 'open_market'].includes(decision)) {
-        console.log('⚠️ Invalid decision. Use: accept / reject / open_market');
-        rl.close();
-        return channel.nack(msg); // requeue message
-      }
-
-      const status = decision === 'accept' ? 'accepted' :
-                     decision === 'reject' ? 'rejected' : 'open_market';
-
-      const bookingId = booking.id;
-
-      db.query(
-        'UPDATE rides SET status = ? WHERE id = ?',
-        [status, bookingId],
-        (err, result) => {
-          if (err) {
-            console.error('❌ Failed to update booking status in DB:', err);
-          } else {
-            console.log(`✅ Booking ID ${bookingId} marked as: ${status.toUpperCase()}`);
-
-            // 🧾 Send invoice if accepted
-            if (status === 'accepted') {
-              db.query('SELECT * FROM rides WHERE id = ?', [bookingId], (err, rows) => {
-                if (err || rows.length === 0) {
-                  console.error('❌ Could not retrieve booking details for invoice');
-                } else {
-                  const ride = rows[0];
-
-                  // Build booking object for invoice
-                  const bookingData = {
-                    id: ride.id,
-                    guest_name: ride.guest_name,
-                    phone: ride.phone,
-                    pickup: ride.pickup,
-                    dropoff: ride.dropoff,
-                    associated_member: ride.associated_member,
-                    email: ride.email // Make sure this exists in DB
-                  };
-
-                  generateAndSendInvoice(bookingData)
-                    .then(() => console.log(`📧 Invoice sent for booking ID ${ride.id}`))
-                    .catch((err) => console.error('❌ Invoice sending failed:', err));
+                if (!['accept', 'reject', 'open_market'].includes(decision)) {
+                    console.log('⚠️ Invalid decision. Use: accept / reject / open_market');
+                    rl.close();
+                    return channel.nack(msg); // Nack (requeue) message if invalid decision
                 }
-              });
-            }
 
-            channel.ack(msg);
-          }
-          rl.close();
+                const status = decision === 'accept' ? 'accepted' :
+                               decision === 'reject' ? 'rejected' : 'open_market';
+
+                const bookingId = booking.id;
+
+                db.query(
+                    'UPDATE rides SET status = ? WHERE id = ?',
+                    [status, bookingId],
+                    (err, result) => {
+                        if (err) {
+                            console.error('❌ Failed to update booking status in DB:', err);
+                            channel.nack(msg, false, true); // Nack and requeue
+                        } else {
+                            console.log(`✅ Booking ID ${bookingId} marked as: ${status.toUpperCase()}`);
+
+                            if (status === 'accepted') {
+                                db.query('SELECT * FROM rides WHERE id = ?', [bookingId], (err, rows) => {
+                                    if (err || rows.length === 0) {
+                                        console.error('❌ Could not retrieve booking details for invoice');
+                                    } else {
+                                        const ride = rows[0];
+
+                                        const invoiceBookingData = {
+                                            id: ride.id,
+                                            guest_name: ride.guest_name,
+                                            phone: ride.phone,
+                                            pickup: ride.pickup,
+                                            dropoff: ride.dropoff,
+                                            associated_member: ride.associated_member,
+                                            email: ride.email
+                                        };
+
+                                        generateAndSendInvoice(invoiceBookingData)
+                                            .then(() => console.log(`📧 Invoice sent for booking ID ${ride.id}`))
+                                            .catch((err) => console.error('❌ Invoice sending failed:', err));
+                                    }
+                                });
+                            }
+                            channel.ack(msg);
+                        }
+                        rl.close();
+                    }
+                );
+            });
+        }, { noAck: false });
+    } catch (error) {
+        console.error('❌ Failed to connect to RabbitMQ or consumer error:', error);
+        if (connection) {
+            await connection.close();
         }
-      );
-    });
-  });
+        process.exit(1);
+    }
 }
 
 listenForBookings().catch(console.error);
