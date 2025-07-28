@@ -1,333 +1,357 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Booking Confirmation</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="/css/confirmation.css" />
-  <link rel="stylesheet" href="/css/style.css" />
-  <link rel="icon" type="image/png" href="/images/ur.png" />
-  <style>
+    <meta charset="UTF-8" />
+    <title>Booking Confirmation</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="/css/confirmation.css" />
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="icon" type="image/png" href="/images/ur.png" />
+    <style>
+        #map {
+            width: 100%;
+            height: 400px;
+            margin: 20px 0;
+            margin-left: 100px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        #fare-estimate {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        #cancelBtn {
+            background-color: red;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+    </style>
 
-    #map {
-      width: 100%;
-      height: 400px;
-      margin: 20px 0;
-      margin-left: 100px;;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    }
-    #fare-estimate {
-      font-weight: bold;
-      margin-bottom: 10px;
-    }
-    #cancelBtn {
-      background-color: red;
-      color: white;
-      padding: 10px 20px;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-  </style>
-
-
-
-  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBGvVzJu_zA6-ngh8zYuXKABa_CPS6p9B4&libraries=places"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBGvVzJu_zA6-ngh8zYuXKABa_CPS6p9B4&libraries=places"></script>
 </head>
 
 <body>
-  <header class="navbar">
-    <div class="logo">UrbanRide</div>
-    <nav>
-      <a href="/html/index.html">Home</a>
-      <a href="/html/booking.html" class="book-now">Book Another</a>
-    </nav>
-  </header>
+    <header class="navbar">
+        <div class="logo">UrbanRide</div>
+        <nav>
+            <a href="/html/index.html">Home</a>
+            <a href="/html/booking.html" class="book-now">Book Another</a>
+        </nav>
+    </header>
 
-  <main class="confirmation-container">
-    <h1>Your booking is partially confirmed!</h1>
-    <p>Please refer to the section below the map to check the vendor’s response to your booking request. 
-      If the vendor declines your request,
-      you may proceed to make a new booking with an alternative vendor.</p>
-    <p id="info">Fetching booking details...</p>
-    <div id="map"></div>
-    <div id="fare-estimate"></div>
+    <main class="confirmation-container">
+        <h1>Your booking is partially confirmed!</h1>
+        <p>Please refer to the section below the map to check the vendor’s response to your booking request.
+            If the vendor declines your request,
+            you may proceed to make a new booking with an alternative vendor.</p>
+        <p id="info">Fetching booking details...</p>
+        <div id="map"></div>
+        <div id="fare-estimate"></div>
+
+        <div id="vendor-status-wrapper" style="margin-top: 20px; text-align: center;">
+            <strong>Vendor Status: </strong>
+            <span id="vendor-status-badge" style="padding: 6px 12px; border-radius: 4px; background-color: #ccc; color: #333;">
+                Pending
+            </span>
+        </div>
+
+        <audio id="accept-sound" src="/audio/correct-356013.mp3" preload="auto"></audio>
+        <audio id="reject-sound" src="/audio/denied-sound-39708.mp3" preload="auto"></audio>
+
+        <button id="cancelBtn">Cancel Ride</button>
+    </main>
+
+    <footer class="urbanride-footer">
+        <div class="footer-container">
+            <div class="footer-column">
+                <h4>Company</h4>
+                <ul>
+                    <li><a href="#">About us</a></li>
+                    <li><a href="#">Our services</a></li>
+                    <li><a href="#">Blog</a></li>
+                    <li><a href="#">Careers</a></li>
+                </ul>
+            </div>
+            <div class="footer-column">
+                <h4>Products</h4>
+                <ul>
+                    <li><a href="#">Ride</a></li>
+                    <li><a href="#">Drive</a></li>
+                    <li><a href="#">Urban Auto</a></li>
+                    <li><a href="#">Urban Moto</a></li>
+                </ul>
+            </div>
+            <div class="footer-column">
+                <h4>Travel</h4>
+                <ul>
+                    <li><a href="#">Airports</a></li>
+                    <li><a href="#">Cities</a></li>
+                </ul>
+            </div>
+            <div class="footer-column">
+                <h4>Support</h4>
+                <ul>
+                    <li><a href="#">Help Center</a></li>
+                    <li><a href="#">Contact us</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="footer-bottom">
+            <p class="copyright">©2025 UrbanRide technologies Inc.</p>
+            <span class="footer-brand">UrbanRide</span>
+        </div>
+    </footer>
+
+    <script>
+        // Define your Render backend URL here
+        const RENDER_BACKEND_URL = 'https://urbanride.onrender.com';
+
+        let map, directionsService, directionsRenderer; // Declare these globally if needed by other functions
+
+        // Function to initialize map and show route
+        function showGoogleRoute(pickup, dropoff) {
+            directionsService = new google.maps.DirectionsService();
+            directionsRenderer = new google.maps.DirectionsRenderer({ suppressMarkers: false });
+
+            const darkMapStyle = [
+                { elementType: "geometry", stylers: [{ color: "#212121" }] },
+                { elementType: "labels.icon", stylers: [{ visibility: "off" }] },
+                { elementType: "labels.text.fill", stylers: [{ color: "#757575" }] },
+                { elementType: "labels.text.stroke", stylers: [{ color: "#212121" }] },
+                {
+                    featureType: "administrative",
+                    elementType: "geometry",
+                    stylers: [{ color: "#757575" }]
+                },
+                {
+                    featureType: "administrative.country",
+                    elementType: "labels.text.fill",
+                    stylers: [{ color: "#9e9e9e" }]
+                },
+                {
+                    featureType: "poi",
+                    elementType: "labels.text.fill",
+                    stylers: [{ color: "#bdbdbd" }]
+                },
+                {
+                    featureType: "road",
+                    elementType: "geometry",
+                    stylers: [{ color: "#383838" }]
+                },
+                {
+                    featureType: "road.arterial",
+                    elementType: "geometry",
+                    stylers: [{ color: "#4d4d4d" }]
+                },
+                {
+                    featureType: "road.highway",
+                    elementType: "geometry",
+                    stylers: [{ color: "#616161" }]
+                },
+                {
+                    featureType: "road.local",
+                    elementType: "geometry",
+                    stylers: [{ color: "#333333" }]
+                },
+                {
+                    featureType: "transit",
+                    elementType: "labels.text.fill",
+                    stylers: [{ color: "#757575" }]
+                },
+                {
+                    featureType: "water",
+                    elementType: "geometry",
+                    stylers: [{ color: "#000000" }]
+                },
+                {
+                    featureType: "water",
+                    elementType: "labels.text.fill",
+                    stylers: [{ color: "#3d3d3d" }]
+                }
+            ];
+
+            map = new google.maps.Map(document.getElementById("map"), {
+                zoom: 7,
+                center: { lat: 28.6139, lng: 77.2090 }, // Default center, e.g., New Delhi
+                styles: darkMapStyle
+            });
+
+            directionsRenderer.setMap(map);
+
+            const trafficLayer = new google.maps.TrafficLayer();
+            trafficLayer.setMap(map);
+
+            const legend = document.createElement('div');
+            legend.innerHTML = `
+                <div style="background:#1f1f1f; padding:10px; border-radius:5px; color: #fff; font-size: 14px;">
+                    <strong>Legend:</strong><br>
+                    <span style="color:green;">Green</span>: Free Flow<br>
+                    <span style="color:orange;">Orange</span>: Moderate<br>
+                    <span style="color:red;">Red</span>: Heavy
+                </div>`;
+            map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(legend);
+
+            directionsService.route({
+                origin: pickup,
+                destination: dropoff,
+                travelMode: google.maps.TravelMode.DRIVING,
+                drivingOptions: {
+                    departureTime: new Date(),
+                    trafficModel: 'bestguess'
+                }
+            }, (response, status) => {
+                if (status === 'OK') {
+                    directionsRenderer.setDirections(response);
+                    const leg = response.routes[0].legs[0];
+                    const distance = leg.distance.text;
+                    const duration = leg.duration_in_traffic?.text || leg.duration.text;
+                    const estimatedFare = estimateFare(leg.distance.value);
+
+                    document.getElementById("fare-estimate").innerText =
+                        `Distance: ${distance} | Time: ${duration} | Estimated Fare: ₹${estimatedFare}`;
+                } else {
+                    console.error("Google Maps Directions API error:", status);
+                    alert("Could not display route. Reason: " + status + ". Please check your pickup/dropoff locations.");
+                }
+            });
+        }
+
+        function estimateFare(distanceMeters) {
+            const baseFare = 50;
+            const perKmRate = 12;
+            const distanceKm = distanceMeters / 1000;
+            return Math.round(baseFare + distanceKm * perKmRate);
+        }
+
+        // Function to fetch and display booking details
+        async function fetchBookingDetails(bookingId) {
+            const infoEl = document.getElementById('info');
+            try {
+                const res = await fetch(`${RENDER_BACKEND_URL}/api/bookings/by-id/${bookingId}`);
+                if (!res.ok) {
+                    throw new Error(`HTTP error! status: ${res.status}`);
+                }
+                const data = await res.json();
+                const booking = data[0];
+
+                if (!booking) {
+                    infoEl.textContent = 'Booking not found.';
+                    return;
+                }
+
+                infoEl.innerHTML = `
+                    <strong>ID:</strong> ${booking.id}<br>
+                    <strong>Guest:</strong> ${booking.guest_name}<br>
+                    <strong>Pickup:</strong> ${booking.pickup}<br>
+                    <strong>Dropoff:</strong> ${booking.dropoff}
+                `;
+
+                showGoogleRoute(booking.pickup, booking.dropoff);
+            } catch (error) {
+                console.error('Error fetching booking details:', error);
+                infoEl.textContent = 'Error fetching booking details. Please refresh the page.';
+            }
+        }
+
+        // Function to handle booking cancellation
+        function handleCancelBooking(bookingId) {
+            if (confirm("Are you sure you want to cancel the ride?")) {
+                fetch(`${RENDER_BACKEND_URL}/api/bookings/${bookingId}`, {
+                    method: 'DELETE'
+                }).then(res => {
+                    if (res.ok) {
+                        alert("Booking cancelled successfully!");
+                        window.location.href = "/html/index.html";
+                    } else {
+                        // Attempt to read error message from server if any
+                        res.text().then(text => {
+                            console.error("Failed to cancel booking:", text);
+                            alert("Failed to cancel booking: " + text);
+                        }).catch(err => {
+                            console.error("Failed to cancel booking (no body):", err);
+                            alert("Failed to cancel booking. Server did not provide details.");
+                        });
+                    }
+                }).catch(error => {
+                    console.error('Network error cancelling booking:', error);
+                    alert("A network error occurred while trying to cancel the booking.");
+                });
+            }
+        }
+
+        // Function to poll vendor status
+        const vendorBookingId = new URLSearchParams(window.location.search).get('booking_id');
+        const vendorStatusEl = document.getElementById('vendor-status-badge');
+        const acceptSound = document.getElementById('accept-sound');
+        const rejectSound = document.getElementById('reject-sound');
+
+        let previousStatus = 'pending';
+
+        async function fetchVendorStatus() {
+            try {
+                const res = await fetch(`${RENDER_BACKEND_URL}/api/bookings/by-id/${vendorBookingId}`);
+                if (!res.ok) {
+                    throw new Error(`HTTP error! status: ${res.status}`);
+                }
+                const data = await res.json();
+
+                if (!data || !data[0] || !data[0].vendor_status) {
+                    console.warn("No booking data or vendor status found for ID:", vendorBookingId);
+                    return;
+                }
+
+                const currentStatus = data[0].vendor_status.toLowerCase();
+
+                if (currentStatus !== previousStatus) {
+                    previousStatus = currentStatus;
+
+                    if (currentStatus === 'accepted') {
+                        acceptSound.play();
+                        vendorStatusEl.textContent = 'Accepted';
+                        vendorStatusEl.style.backgroundColor = '#4CAF50';
+                        vendorStatusEl.style.color = 'white';
+                    } else if (currentStatus === 'rejected') {
+                        rejectSound.play();
+                        vendorStatusEl.textContent = 'Rejected';
+                        vendorStatusEl.style.backgroundColor = '#f44336';
+                        vendorStatusEl.style.color = 'white';
+                    } else if (currentStatus === 'open_market') {
+                        vendorStatusEl.textContent = 'Moved to Open Market';
+                        vendorStatusEl.style.backgroundColor = '#ff9800';
+                        vendorStatusEl.style.color = 'white';
+                    } else {
+                        vendorStatusEl.textContent = 'Pending';
+                        vendorStatusEl.style.backgroundColor = '#ccc';
+                        vendorStatusEl.style.color = '#333';
+                    }
+                }
+            } catch (err) {
+                console.error('Error fetching booking status:', err);
+            }
+        }
 
 
-<div id="vendor-status-wrapper" style="margin-top: 20px; text-align: center;">
-  <strong>Vendor Status: </strong>
-  <span id="vendor-status-badge" style="padding: 6px 12px; border-radius: 4px; background-color: #ccc; color: #333;">
-    Pending
-  </span>
-</div>
+        // Event listeners and initial calls
+        document.addEventListener('DOMContentLoaded', () => {
+            const bookingIdParam = new URLSearchParams(window.location.search).get('booking_id');
+            if (bookingIdParam) {
+                fetchBookingDetails(bookingIdParam);
+                // Start polling for vendor status
+                setInterval(fetchVendorStatus, 3000);
+                fetchVendorStatus(); // Initial call to display status immediately
+            } else {
+                document.getElementById('info').textContent = "Booking ID not found in URL.";
+            }
 
-<audio id="accept-sound" src="/audio/correct-356013.mp3" preload="auto"></audio>
-<audio id="reject-sound" src="/audio/denied-sound-39708.mp3" preload="auto"></audio>
-
-
-    <button id="cancelBtn">Cancel Ride</button>
-  </main>
-
-  
-
-
-  <footer class="urbanride-footer">
-    <div class="footer-container">
-      <div class="footer-column">
-        <h4>Company</h4>
-        <ul>
-          <li><a href="#">About us</a></li>
-          <li><a href="#">Our services</a></li>
-          <li><a href="#">Blog</a></li>
-          <li><a href="#">Careers</a></li>
-        </ul>
-      </div>
-      <div class="footer-column">
-        <h4>Products</h4>
-        <ul>
-          <li><a href="#">Ride</a></li>
-          <li><a href="#">Drive</a></li>
-          <li><a href="#">Urban Auto</a></li> 
-          <li><a href="#">Urban Moto</a></li>
-        </ul>
-      </div>
-      <div class="footer-column">
-        <h4>Travel</h4>
-        <ul>
-          <li><a href="#">Airports</a></li>
-          <li><a href="#">Cities</a></li>
-        </ul>
-      </div>
-      <div class="footer-column">
-        <h4>Support</h4>
-        <ul>
-          <li><a href="#">Help Center</a></li>
-          <li><a href="#">Contact us</a></li>
-        </ul>
-      </div>
-    </div>
-
-    <div class="footer-bottom">
-      <p class="copyright">©2025 UrbanRide technologies Inc.</p>
-      <span class="footer-brand">UrbanRide</span>
-    </div>
-  </footer>
-
-  <script>
-    const bookingId = new URLSearchParams(window.location.search).get('booking_id');
-    const infoEl = document.getElementById('info');
-    let map, directionsService, directionsRenderer;
-
-    if (!bookingId) {
-      infoEl.textContent = "Booking ID not found.";
-    } else {
-      fetch(`http://localhost:5000/api/bookings/by-id/${bookingId}`)
-        .then(res => res.json())
-        .then(data => {
-          const booking = data[0];
-          if (!booking) {
-            infoEl.textContent = 'Booking not found.';
-            return;
-          }
-
-          infoEl.innerHTML = `
-            <strong>ID:</strong> ${booking.id}<br>
-            <strong>Guest:</strong> ${booking.guest_name}<br>
-            <strong>Pickup:</strong> ${booking.pickup}<br>
-            <strong>Dropoff:</strong> ${booking.dropoff}
-          `;
-
-          showGoogleRoute(booking.pickup, booking.dropoff);
+            const cancelBtn = document.getElementById('cancelBtn');
+            if (cancelBtn) {
+                cancelBtn.addEventListener('click', () => handleCancelBooking(bookingIdParam));
+            }
         });
-    }
-
-    function showGoogleRoute(pickup, dropoff) {
-      directionsService = new google.maps.DirectionsService();
-      directionsRenderer = new google.maps.DirectionsRenderer({ suppressMarkers: false });
-
-      const darkMapStyle = [
-        { elementType: "geometry", stylers: [{ color: "#212121" }] },
-        { elementType: "labels.icon", stylers: [{ visibility: "off" }] },
-        { elementType: "labels.text.fill", stylers: [{ color: "#757575" }] },
-        { elementType: "labels.text.stroke", stylers: [{ color: "#212121" }] },
-        {
-          featureType: "administrative",
-          elementType: "geometry",
-          stylers: [{ color: "#757575" }]
-        },
-        {
-          featureType: "administrative.country",
-          elementType: "labels.text.fill",
-          stylers: [{ color: "#9e9e9e" }]
-        },
-        {
-          featureType: "poi",
-          elementType: "labels.text.fill",
-          stylers: [{ color: "#bdbdbd" }]
-        },
-        {
-          featureType: "road",
-          elementType: "geometry",
-          stylers: [{ color: "#383838" }]
-        },
-        {
-          featureType: "road.arterial",
-          elementType: "geometry",
-          stylers: [{ color: "#4d4d4d" }]
-        },
-        {
-          featureType: "road.highway",
-          elementType: "geometry",
-          stylers: [{ color: "#616161" }]
-        },
-        {
-          featureType: "road.local",
-          elementType: "geometry",
-          stylers: [{ color: "#333333" }]
-        },
-        {
-          featureType: "transit",
-          elementType: "labels.text.fill",
-          stylers: [{ color: "#757575" }]
-        },
-        {
-          featureType: "water",
-          elementType: "geometry",
-          stylers: [{ color: "#000000" }]
-        },
-        {
-          featureType: "water",
-          elementType: "labels.text.fill",
-          stylers: [{ color: "#3d3d3d" }]
-        }
-      ];
-
-      map = new google.maps.Map(document.getElementById("map"), {
-        zoom: 7,
-        center: { lat: 28.6139, lng: 77.2090 },
-        styles: darkMapStyle
-      });
-
-      directionsRenderer.setMap(map);
-
-      const trafficLayer = new google.maps.TrafficLayer();
-      trafficLayer.setMap(map);
-
-      const legend = document.createElement('div');
-      legend.innerHTML = `
-        <div style="background:#1f1f1f; padding:10px; border-radius:5px; color: #fff; font-size: 14px;">
-          <strong>Legend:</strong><br>
-          <span style="color:green;">Green</span>: Free Flow<br>
-          <span style="color:orange;">Orange</span>: Moderate<br>
-          <span style="color:red;">Red</span>: Heavy
-        </div>`;
-      map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(legend);
-
-      directionsService.route({
-        origin: pickup,
-        destination: dropoff,
-        travelMode: google.maps.TravelMode.DRIVING,
-        drivingOptions: {
-          departureTime: new Date(),
-          trafficModel: 'bestguess'
-        }
-      }, (response, status) => {
-        if (status === 'OK') {
-          directionsRenderer.setDirections(response);
-          const leg = response.routes[0].legs[0];
-          const distance = leg.distance.text;
-          const duration = leg.duration_in_traffic?.text || leg.duration.text;
-          const estimatedFare = estimateFare(leg.distance.value);
-
-          document.getElementById("fare-estimate").innerText =
-            `Distance: ${distance} | Time: ${duration} | Estimated Fare: ₹${estimatedFare}`;
-        } else {
-          alert("Could not display route due to: " + status);
-        }
-      });
-    }
-
-    function estimateFare(distanceMeters) {
-      const baseFare = 50;
-      const perKmRate = 12;
-      const distanceKm = distanceMeters / 1000;
-      return Math.round(baseFare + distanceKm * perKmRate);
-    }
-
-    document.getElementById('cancelBtn').addEventListener('click', () => {
-      if (confirm("Are you sure you want to cancel the ride?")) {
-        fetch(`http://localhost:5000/api/bookings/${bookingId}`, {
-          method: 'DELETE'
-        }).then(res => {
-          if (res.ok) {
-            alert("Booking cancelled");
-            window.location.href = "index.html";
-          } else {
-            alert("Failed to cancel booking");
-          }
-        });
-      }
-    });
-
-
-  </script>
-
-
-
-<!-- Sound -->
-<script>
-const vendorBookingId = new URLSearchParams(window.location.search).get('booking_id');
-const vendorStatusEl = document.getElementById('vendor-status-badge');
-const acceptSound = document.getElementById('accept-sound');
-const rejectSound = document.getElementById('reject-sound');
-
-let previousStatus = 'pending'; // initial fallback
-
-async function fetchVendorStatus() {
-  try {
-    const res = await fetch(`http://localhost:5000/api/bookings/by-id/${vendorBookingId}`);
-    const data = await res.json();
-
-    if (!data || !data[0] || !data[0].vendor_status) return;
-
-    const currentStatus = data[0].vendor_status.toLowerCase();
-
-    if (currentStatus !== previousStatus) {
-      previousStatus = currentStatus;
-
-      // 🔊 Play different sound depending on status
-      if (currentStatus === 'accepted') {
-        acceptSound.play();
-        vendorStatusEl.textContent = 'Accepted';
-        vendorStatusEl.style.backgroundColor = '#4CAF50'; // green
-        vendorStatusEl.style.color = 'white';
-      } else if (currentStatus === 'rejected') {
-        rejectSound.play();
-        vendorStatusEl.textContent = 'Rejected';
-        vendorStatusEl.style.backgroundColor = '#f44336'; // red
-        vendorStatusEl.style.color = 'white';
-      } else if (currentStatus === 'open_market') {
-        vendorStatusEl.textContent = 'Moved to Open Market';
-        vendorStatusEl.style.backgroundColor = '#ff9800'; // orange
-        vendorStatusEl.style.color = 'white';
-      } else {
-        vendorStatusEl.textContent = 'Pending';
-        vendorStatusEl.style.backgroundColor = '#ccc';
-        vendorStatusEl.style.color = '#333';
-      }
-    }
-  } catch (err) {
-    console.error('Error fetching booking:', err);
-  }
-}
-
-// 🔁 Poll every 3 seconds
-setInterval(fetchVendorStatus, 3000);
-fetchVendorStatus(); // initial call
-</script>
-
-
-
+    </script>
 </body>
 </html>
