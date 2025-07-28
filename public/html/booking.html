@@ -1,275 +1,283 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Book Your Ride</title>
-  <link rel="stylesheet" href="/css/booking.css">
-  <link rel="stylesheet" href="/css/style.css">
-  <link rel="icon" type="image/png" href="/images/ur.png">
-  <!-- Google Maps API -->
-  
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Book Your Ride</title>
+  <link rel="stylesheet" href="/css/booking.css">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" type="image/png" href="/images/ur.png">
+    
 </head>
 
 <body>
-  <header>UrbanRide - Book Your Ride</header>
+  <header>UrbanRide - Book Your Ride</header>
 
-  <div class="form-container">
-    <h2>Ride Booking Form</h2>
-    <form id="bookingForm">
-      <div class="form-row">
-        <div class="form-group">
-          <label for="guestName">Guest Name</label>
-          <input type="text" id="guestName" name="guestName" required />
-        </div>
-        <div class="form-group">
-          <label for="mobile">Mobile Number</label>
-          <input type="tel" id="mobile" name="mobile" required />
-        </div>
-      </div>
+  <div class="form-container">
+    <h2>Ride Booking Form</h2>
+    <form id="bookingForm">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="guestName">Guest Name</label>
+          <input type="text" id="guestName" name="guestName" required />
+        </div>
+        <div class="form-group">
+          <label for="mobile">Mobile Number</label>
+          <input type="tel" id="mobile" name="mobile" required />
+        </div>
+      </div>
 
-      <div class="form-row">
-        <div class="form-group">
-          <label for="email">Email ID</label>
-          <input type="email" id="email" name="email" required />
-        </div>
-        <div class="form-group">
-          <label for="passengers">No. of Passengers</label>
-          <input type="number" id="passengers" name="passengers" min="1" required />
-        </div>
-      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="email">Email ID</label>
+          <input type="email" id="email" name="email" required />
+        </div>
+        <div class="form-group">
+          <label for="passengers">No. of Passengers</label>
+          <input type="number" id="passengers" name="passengers" min="1" required />
+        </div>
+      </div>
 
-      <div class="form-row">
-        <div class="form-group">
-          <label for="pickup">Pick-up Location</label>
-          <input id="pickup" type="text" name="pickup" required />
-        </div>
-        <div class="form-group">
-          <label for="dropoff">Drop-off Location</label>
-          <input id="dropoff" type="text" name="dropoff" required />
-        </div>
-      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="pickup">Pick-up Location</label>
+          <input id="pickup" type="text" name="pickup" required />
+        </div>
+        <div class="form-group">
+          <label for="dropoff">Drop-off Location</label>
+          <input id="dropoff" type="text" name="dropoff" required />
+        </div>
+      </div>
 
-      <div class="form-row">
-        <div class="form-group full-width">
-          <label for="address">Address</label>
-          <textarea id="address" name="address" rows="3" required></textarea>
-        </div>
-      </div>
+      <div class="form-row">
+        <div class="form-group full-width">
+          <label for="address">Address</label>
+          <textarea id="address" name="address" rows="3" required></textarea>
+        </div>
+      </div>
 
-      <div class="form-row">
-        <div class="form-group">
-          <label>Trip Type</label>
-          <input type="radio" id="local" name="tripType" value="Local" required />
-          <label for="local">Local</label>
-          <input type="radio" id="outstation" name="tripType" value="Outstation" />
-          <label for="outstation">Outstation</label>
-        </div>
-        <div class="form-group">
-          <label for="datetime">Date & Time</label>
-          <input type="datetime-local" id="datetime" name="datetime" required />
-        </div>
-      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Trip Type</label>
+          <input type="radio" id="local" name="tripType" value="Local" required />
+          <label for="local">Local</label>
+          <input type="radio" id="outstation" name="tripType" value="Outstation" />
+          <label for="outstation">Outstation</label>
+        </div>
+        <div class="form-group">
+          <label for="datetime">Date & Time</label>
+          <input type="datetime-local" id="datetime" name="datetime" required />
+        </div>
+      </div>
 
-      <div class="form-row">
-        <div class="form-group">
-          <label for="vehicle">Vehicle Type</label>
-          <select id="vehicle" name="vehicle_type" required>
-            <option value="">Select vehicle</option>
-            <option value="Sedan">Sedan</option>
-            <option value="SUV">SUV</option>
-            <option value="Luxury">Luxury</option>
-            <option value="Tempo Traveller">Tempo Traveller</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="member">Associated Member</label>
-          <select id="member" name="associated_member" required>
-            <option value="">Select member</option>
-            <option value="John">John</option>
-            <option value="Priya">Priya</option>
-            <option value="Amit">Amit</option>
-            <option value="Other">Other</option>
-          </select>
-        </div>
-      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="vehicle">Vehicle Type</label>
+          <select id="vehicle" name="vehicle_type" required>
+            <option value="">Select vehicle</option>
+            <option value="Sedan">Sedan</option>
+            <option value="SUV">SUV</option>
+            <option value="Luxury">Luxury</option>
+            <option value="Tempo Traveller">Tempo Traveller</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="member">Associated Member</label>
+          <select id="member" name="associated_member" required>
+            <option value="">Select member</option>
+            <option value="John">John</option>
+            <option value="Priya">Priya</option>
+            <option value="Amit">Amit</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+      </div>
 
-      <div class="form-row">
-        <button type="submit" class="submit-btn">Book Ride</button>
-      </div>
-    </form>
-  </div>
+      <div class="form-row">
+        <button type="submit" class="submit-btn">Book Ride</button>
+        <div id="tripInfo"></div>       </div>
+    </form>
+  </div>
 
-  <div id="popupMessage" class="popup-message"></div>
+  <div id="popupMessage" class="popup-message"></div>
 
-  <script>
-    let pickupCoords = null;
-    let dropoffCoords = null;
+  <script>
+    let pickupCoords = null;
+    let dropoffCoords = null;
 
-    function initAutocomplete() {
-      const pickupInput = document.getElementById('pickup');
-      const dropoffInput = document.getElementById('dropoff');
+    // Function to initialize Google Maps Autocomplete
+    function initAutocomplete() {
+      const pickupInput = document.getElementById('pickup');
+      const dropoffInput = document.getElementById('dropoff');
 
-      const pickupAutocomplete = new google.maps.places.Autocomplete(pickupInput);
-      const dropoffAutocomplete = new google.maps.places.Autocomplete(dropoffInput);
+      const pickupAutocomplete = new google.maps.places.Autocomplete(pickupInput);
+      const dropoffAutocomplete = new google.maps.places.Autocomplete(dropoffInput);
 
-      pickupAutocomplete.addListener('place_changed', () => {
-        const place = pickupAutocomplete.getPlace();
-        if (place.geometry) {
-          pickupCoords = {
-            lat: place.geometry.location.lat(),
-            lng: place.geometry.location.lng()
-          };
+      pickupAutocomplete.addListener('place_changed', () => {
+        const place = pickupAutocomplete.getPlace();
+        if (place.geometry) {
+          pickupCoords = {
+            lat: place.geometry.location.lat(),
+            lng: place.geometry.location.lng()
+          };
+            // Trigger distance/time calculation if both are set
+            if (dropoffCoords) getDistanceAndTimeAndDisplay();
+        }
+      });
+
+      dropoffAutocomplete.addListener('place_changed', () => {
+        const place = dropoffAutocomplete.getPlace();
+        if (place.geometry) {
+          dropoffCoords = {
+            lat: place.geometry.location.lat(),
+            lng: place.geometry.location.lng()
+          };
+            // Trigger distance/time calculation if both are set
+            if (pickupCoords) getDistanceAndTimeAndDisplay();
+        }
+      });
+    }
+
+    // New function to fetch and display distance/time
+    async function getDistanceAndTimeAndDisplay() {
+        if (!pickupCoords || !dropoffCoords) {
+            document.getElementById('tripInfo').textContent = '';
+            return;
         }
-      });
 
-      dropoffAutocomplete.addListener('place_changed', () => {
-        const place = dropoffAutocomplete.getPlace();
-        if (place.geometry) {
-          dropoffCoords = {
-            lat: place.geometry.location.lat(),
-            lng: place.geometry.location.lng()
-          };
+        const origin = `${pickupCoords.lat},${pickupCoords.lng}`;
+        const destination = `${dropoffCoords.lat},${dropoffCoords.lng}`;
+
+        try {
+            // FIX 1: Call your own backend /directions endpoint
+            const response = await fetch('/directions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ origin, destination })
+            });
+
+            const data = await response.json();
+
+            const tripInfoDiv = document.getElementById('tripInfo');
+            if (response.ok) {
+                tripInfoDiv.textContent = `Distance: ${data.distance}, Estimated Time: ${data.duration}`;
+            } else {
+                console.error('Failed to get directions from backend:', data.error || 'Unknown error');
+                tripInfoDiv.textContent = `Error getting trip info: ${data.error || 'Please try again.'}`;
+            }
+        } catch (err) {
+            console.error('Network error fetching directions:', err);
+            document.getElementById('tripInfo').textContent = 'Error fetching trip info.';
         }
-      });
     }
 
-    async function getDistanceAndTime() {
-      if (!pickupCoords || !dropoffCoords) return null;
 
-      const origin = `${pickupCoords.lat},${pickupCoords.lng}`;
-      const destination = `${dropoffCoords.lat},${dropoffCoords.lng}`;
-      const apiKey = "AIzaSyBGvVzJu_zA6-ngh8zYuXKABa_CPS6p9B4";
+    function showPopupMessage(type, text) {
+      const popup = document.getElementById('popupMessage');
+      popup.className = `popup-message ${type}`;
+      popup.textContent = text;
+      popup.style.display = 'block';
+      setTimeout(() => {
+        popup.style.display = 'none';
+      }, 3000);
+    }
 
-      const url = `https://corsproxy.io/?https://maps.googleapis.com/maps/api/directions/json?origin=${origin}&destination=${destination}&key=${apiKey}&traffic_model=best_guess&departure_time=now`;
+    document.getElementById('bookingForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const form = e.target;
 
-      try {
-        const response = await fetch(url);
-        const data = await response.json();
+      if (!pickupCoords || !dropoffCoords) {
+        showPopupMessage('error', '⚠️ Please select both pickup and dropoff locations.');
+        return;
+      }
 
-        if (data.routes && data.routes.length > 0) {
-          const leg = data.routes[0].legs[0];
-          return {
-            time: leg.duration.text,
-            distance: leg.distance.text
-          };
-        } else {
-          return null;
-        }
-      } catch (err) {
-        console.error('Failed to get directions:', err);
-        return null;
-      }
-    }
+      const tripType = document.querySelector('input[name="tripType"]:checked')?.value;
 
-    function showPopupMessage(type, text) {
-      const popup = document.getElementById('popupMessage');
-      popup.className = `popup-message ${type}`;
-      popup.textContent = text;
-      popup.style.display = 'block';
-      setTimeout(() => {
-        popup.style.display = 'none';
-      }, 3000);
-    }
+      const bookingData = {
+        guest_name: form.guestName.value,
+        passengers: parseInt(form.passengers.value),
+        email: form.email.value,
+        phone: form.mobile.value,
+        address: form.address.value,
+        trip_type: tripType,
+        pickup: form.pickup.value,
+        dropoff: form.dropoff.value,
+        date_time: form.datetime.value,
+        vehicle_type: form.vehicle.value,
+        associated_member: form.member.value
+      };
 
-    document.getElementById('bookingForm').addEventListener('submit', async function (e) {
-      e.preventDefault();
-      const form = e.target;
+      // Remove direct call to getDistanceAndTime as it will be part of the backend
+      // or you can call it and add its info to bookingData if needed, but it should be
+      // handled by the backend's /directions endpoint as we updated server.js
 
-      if (!pickupCoords || !dropoffCoords) {
-        showPopupMessage('error', '⚠️ Please select both pickup and dropoff locations.');
-        return;
-      }
+      try {
+        // FIX 2: Call your own backend /bookings endpoint (using relative path)
+        const response = await fetch('/bookings', { // Changed from 'http://localhost:5000/api/bookings'
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(bookingData)
+        });
 
-      const tripType = document.querySelector('input[name="tripType"]:checked')?.value;
+        const result = await response.json();
 
-      const bookingData = {
-        guest_name: form.guestName.value,
-        passengers: parseInt(form.passengers.value),
-        email: form.email.value,
-        phone: form.mobile.value,
-        address: form.address.value,
-        trip_type: tripType,
-        pickup: form.pickup.value,
-        dropoff: form.dropoff.value,
-        date_time: form.datetime.value,
-        vehicle_type: form.vehicle.value,
-        associated_member: form.member.value
-      };
+        if (response.ok && result.booking_id) {
+          showPopupMessage('success', `✅ Booking successful! ID: ${result.booking_id} \nRedirecting...`);
+          form.reset();
+          setTimeout(() => {
+            window.location.href = `/html/confirmation.html?booking_id=${result.booking_id}`;
+          }, 3000);
+        } else {
+          showPopupMessage('error', result.message || '❌ Something went wrong.');
+        }
+      } catch (err) {
+        console.error(err);
+        showPopupMessage('error', '⚠️ Could not send request. Try again.');
+      }
+    });
+  </script>
 
-      const routeInfo = await getDistanceAndTime();
-      if (routeInfo) {
-        bookingData.distance = routeInfo.distance;
-        bookingData.estimated_time = routeInfo.time;
-      }
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBGvVzJu_zA6-ngh8zYuXKABa_CPS6p9B4&libraries=places&callback=initAutocomplete" async defer></script>
 
-      try {
-        const response = await fetch('http://localhost:5000/api/bookings', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(bookingData)
-        });
-
-        const result = await response.json();
-
-        if (response.ok && result.booking_id) {
-          showPopupMessage('success', `✅ Booking successful! ID: ${result.booking_id} \nRedirecting...`);
-          form.reset();
-          setTimeout(() => {
-            window.location.href = `/html/confirmation.html?booking_id=${result.booking_id}`;
-          }, 3000);
-        } else {
-          showPopupMessage('error', result.message || '❌ Something went wrong.');
-        }
-      } catch (err) {
-        console.error(err);
-        showPopupMessage('error', '⚠️ Could not send request. Try again.');
-      }
-    });
-  </script>
-
-  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBGvVzJu_zA6-ngh8zYuXKABa_CPS6p9B4&libraries=places&callback=initAutocomplete" async defer></script>
-
-  <footer class="urbanride-footer">
-    <div class="footer-container">
-      <div class="footer-column">
-        <h4>Company</h4>
-        <ul>
-          <li><a href="#">About us</a></li>
-          <li><a href="#">Our services</a></li>
-          <li><a href="#">Blog</a></li>
-          <li><a href="#">Careers</a></li>
-        </ul>
-      </div>
-      <div class="footer-column">
-        <h4>Products</h4>
-        <ul>
-          <li><a href="#">Ride</a></li>
-          <li><a href="#">Drive</a></li>
-          <li><a href="#">Urban Auto</a></li> 
-          <li><a href="#">Urban Moto</a></li>
-        </ul>
-      </div>
-      <div class="footer-column">
-        <h4>Travel</h4>
-        <ul>
-          <li><a href="#">Airports</a></li>
-          <li><a href="#">Cities</a></li>
-        </ul>
-      </div>
-      <div class="footer-column">
-        <h4>Support</h4>
-        <ul>
-          <li><a href="#">Help Center</a></li>
-          <li><a href="#">Contact us</a></li>
-        </ul>
-      </div>
-    </div>
-    <div class="footer-bottom">
-      <p class="copyright">©2025 UrbanRide technologies Inc.</p>
-      <span class="footer-brand">UrbanRide</span>
-    </div>
-  </footer>
+  <footer class="urbanride-footer">
+    <div class="footer-container">
+      <div class="footer-column">
+        <h4>Company</h4>
+        <ul>
+          <li><a href="#">About us</a></li>
+          <li><a href="#">Our services</a></li>
+          <li><a href="#">Blog</a></li>
+          <li><a href="#">Careers</a></li>
+        </ul>
+      </div>
+      <div class="footer-column">
+        <h4>Products</h4>
+        <ul>
+          <li><a href="#">Ride</a></li>
+          <li><a href="#">Drive</a></li>
+          <li><a href="#">Urban Auto</a></li> 
+          <li><a href="#">Urban Moto</a></li>
+        </ul>
+      </div>
+      <div class="footer-column">
+        <h4>Travel</h4>
+        <ul>
+          <li><a href="#">Airports</a></li>
+          <li><a href="#">Cities</a></li>
+        </ul>
+      </div>
+      <div class="footer-column">
+        <h4>Support</h4>
+        <ul>
+          <li><a href="#">Help Center</a></li>
+          <li><a href="#">Contact us</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p class="copyright">©2025 UrbanRide technologies Inc.</p>
+      <span class="footer-brand">UrbanRide</span>
+    </div>
+  </footer>
 </body>
 </html>
-
