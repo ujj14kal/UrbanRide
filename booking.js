@@ -1,84 +1,89 @@
+// booking.js
 const express = require('express');
 const router = express.Router();
 const db = require('./db');
 const amqp = require('amqplib');
-const axios = require('axios');
 
-// Telegram Bot Setup
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8313019141:AAFQSebv9QQSmvCzZni7-RnSM2ovcn3JKvs';
-const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID || '7596524752';
+let channel;
+const queue = 'ride_requests';
 
-// Booking endpoint
-router.post('/book', async (req, res) => {
-  const {
-    guest_name,
-    phone,
-    pickup,
-    dropoff,
-    vehicle_type,
-    date_time,
-    member
-  } = req.body;
+(async () => {
+  try {
+    const connection = await amqp.connect(process.env.CLOUDAMQP_URL || 'amqp://localhost');
+    channel = await connection.createChannel();
+    await channel.assertQueue(queue);
+    console.log('✅ Connected to RabbitMQ');
+  } catch (err) {
+    console.error('❌ Failed to connect to RabbitMQ:', err.message);
+  }
+})();
+
+// POST a new booking
+router.post('/', async (req, res) => {
+  const { guestName, phone, pickup, dropoff, associatedMember } = req.body;
 
   try {
-    const [result] = await db.execute(
-      'INSERT INTO bookings (guest_name, phone, pickup, dropoff, vehicle_type, date_time, member, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [guest_name, phone, pickup, dropoff, vehicle_type, date_time, member, 'pending']
+    const [result] = await db.query(
+      'INSERT INTO bookings (guestName, phone, pickup, dropoff, associatedMember, status) VALUES (?, ?, ?, ?, ?, ?)',
+      [guestName, phone, pickup, dropoff, associatedMember, 'pending']
     );
 
-    const booking_id = result.insertId;
-    console.log('✅ Booking saved with ID:', booking_id);
-
-    // Prepare booking data
-    const bookingData = {
-      id: booking_id,
-      guest_name,
+    const booking = {
+      id: result.insertId,
+      guestName,
       phone,
       pickup,
       dropoff,
-      vehicle_type,
-      date_time,
-      member,
+      associatedMember,
       status: 'pending'
     };
 
-    // Send to RabbitMQ
-    const connection = await amqp.connect(process.env.RABBITMQ_URL || 'amqp://localhost');
-    const channel = await connection.createChannel();
-    const queue = 'ride_requests';
-
-    await channel.assertQueue(queue, { durable: false });
-    await channel.sendToQueue(queue, Buffer.from(JSON.stringify(bookingData)));
-    console.log('📤 Sent booking to vendor queue');
-
-    // Send Telegram notification
-    const message = `
-🆕 New Booking #${booking_id}
-👤 Guest: ${guest_name}
-📍 From: ${pickup}
-📍 To: ${dropoff}
-🚗 Vehicle: ${vehicle_type}
-📞 Phone: ${phone}
-📅 Date: ${date_time}
-`;
-
-    try {
-      console.log('📤 Attempting to send Telegram message...');
-      await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-        chat_id: TELEGRAM_CHAT_ID,
-        text: message
-      });
-      console.log('✅ Telegram message sent!');
-    } catch (err) {
-      console.error('❌ Telegram send failed:', err.response?.data || err.message);
+    if (channel) {
+      channel.sendToQueue(queue, Buffer.from(JSON.stringify(booking)));
+      console.log('📨 Sent booking to queue:', booking);
     }
 
-    res.status(200).json({ id: booking_id, message: 'Booking created successfully' });
+    res.json(booking);
   } catch (err) {
-    console.error('❌ Booking error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Error creating booking:', err.message);
+    res.status(500).json({ error: 'Failed to create booking' });
+  }
+});
+
+// GET bookings by phone or ID
+router.get('/', async (req, res) => {
+  const { phone, id } = req.query;
+
+  try {
+    let results;
+    if (id) {
+      [results] = await db.query('SELECT * FROM bookings WHERE id = ?', [id]);
+    } else if (phone) {
+      [results] = await db.query('SELECT * FROM bookings WHERE phone = ?', [phone]);
+    } else {
+      return res.status(400).json({ error: 'Provide phone or id' });
+    }
+
+    res.json(results);
+  } catch (err) {
+    console.error('Error fetching booking:', err.message);
+    res.status(500).json({ error: 'Failed to fetch booking' });
+  }
+});
+
+// DELETE a booking by ID
+router.delete('/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    await db.query('DELETE FROM bookings WHERE id = ?', [id]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Error deleting booking:', err.message);
+    res.status(500).json({ error: 'Failed to delete booking' });
   }
 });
 
 module.exports = router;
+
 
