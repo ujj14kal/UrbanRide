@@ -22,6 +22,8 @@ function sendToTelegram(booking) {
 /open_${booking.id}
 `;
 
+    console.log("📤 Sending to Telegram:", message); // Debug log
+
     return axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
         chat_id: TELEGRAM_CHAT_ID,
         text: message,
@@ -49,7 +51,7 @@ async function receiveMessages() {
                 console.log(`📨 Sent booking ID ${booking.id} to Telegram`);
                 channel.ack(msg);
             } catch (error) {
-                console.error('❌ Failed to send to Telegram:', error);
+                console.error('❌ Failed to send to Telegram:', error.response?.data || error.message);
                 channel.nack(msg, false, true); // Retry if sending fails
             }
         }, { noAck: false });
