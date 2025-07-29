@@ -36,7 +36,7 @@ async function receiveMessages() {
         const channel = await connection.createChannel();
         const queue = 'ride_requests';
 
-        await channel.assertQueue(queue, { durable: true });
+        await channel.assertQueue(queue, { durable: false });
 
         console.log('✅ Waiting for booking messages...');
 
