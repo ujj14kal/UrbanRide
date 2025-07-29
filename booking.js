@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db');
+const db = require('./db');
 const amqp = require('amqplib');
 const axios = require('axios');
 
@@ -81,3 +81,4 @@ router.post('/book', async (req, res) => {
 });
 
 module.exports = router;
+
