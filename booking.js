@@ -77,7 +77,7 @@ router.post('/', async (req, res) => {
         const channel = await conn.createChannel();
         const queue = 'booking_requests'; // Use the correct queue name
 
-        await channel.assertQueue(queue, { durable: false });
+        await channel.assertQueue(queue, { durable: true });
         channel.sendToQueue(queue, Buffer.from(JSON.stringify(bookingData)), { persistent: true }); // Use 'queue' variable
 
 
