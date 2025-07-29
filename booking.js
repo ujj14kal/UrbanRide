@@ -1,155 +1,83 @@
-const amqp = require('amqplib');
 const express = require('express');
 const router = express.Router();
-const db = require('./db'); // Assuming db.js is correctly configured for Railway MySQL
+const db = require('../db');
+const amqp = require('amqplib');
+const axios = require('axios');
 
-// Load environment variables for Render deployment
-// (This is usually done in your main app.js or server.js,
-// but explicitly calling it here ensures env vars are available
-// if this module is loaded before the main app's dotenv call.
-// However, the best practice is to load dotenv once at the application entry point.)
-// require('dotenv').config(); // <-- This line should typically be in your main app.js/server.js
+// Telegram Bot Setup
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8313019141:AAFQSebv9QQSmvCzZni7-RnSM2ovcn3JKvs';
+const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID || '7596524752';
 
+// Booking endpoint
+router.post('/book', async (req, res) => {
+  const {
+    guest_name,
+    phone,
+    pickup,
+    dropoff,
+    vehicle_type,
+    date_time,
+    member
+  } = req.body;
 
-// ✅ POST /api/bookings
-router.post('/', async (req, res) => {
-  const {
-    guest_name,
-    passengers,
-    email,
-    phone,
-    address,
-    trip_type,
-    pickup,
-    dropoff,
-    date_time,
-    vehicle_type,
-    associated_member
-  } = req.body;
+  try {
+    const [result] = await db.execute(
+      'INSERT INTO bookings (guest_name, phone, pickup, dropoff, vehicle_type, date_time, member, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [guest_name, phone, pickup, dropoff, vehicle_type, date_time, member, 'pending']
+    );
 
-    // FIX: Re-typed SQL query using template literals to eliminate potential hidden syntax errors
-    const sql = `
-        INSERT INTO rides (
-            guest_name, passengers, email, phone, address, trip_type,
-            pickup, dropoff, date_time, vehicle_type, associated_member, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `;
+    const booking_id = result.insertId;
+    console.log('✅ Booking saved with ID:', booking_id);
 
-  const values = [
-    guest_name, passengers, email, phone, address, trip_type,
-    pickup, dropoff, date_time, vehicle_type, associated_member, 'pending'
-  ];
+    // Prepare booking data
+    const bookingData = {
+      id: booking_id,
+      guest_name,
+      phone,
+      pickup,
+      dropoff,
+      vehicle_type,
+      date_time,
+      member,
+      status: 'pending'
+    };
 
-  db.query(sql, values, async (err, result) => {
-    if (err) {
-      console.error("Booking error:", err);
-      return res.status(500).send("Database error"); // Still sending plain text, but fix SQL first
-    }
+    // Send to RabbitMQ
+    const connection = await amqp.connect(process.env.RABBITMQ_URL || 'amqp://localhost');
+    const channel = await connection.createChannel();
+    const queue = 'ride_requests';
 
-    const booking_id = result.insertId;
+    await channel.assertQueue(queue, { durable: false });
+    await channel.sendToQueue(queue, Buffer.from(JSON.stringify(bookingData)));
+    console.log('📤 Sent booking to vendor queue');
 
-    const bookingData = {
-      id: booking_id,
-      guest_name,
-      passengers,
-      email,
-      phone,
-      address,
-      trip_type,
-      pickup,
-      dropoff,
-      date_time,
-      vehicle_type,
-      associated_member
-    };
+    // Send Telegram notification
+    const message = `
+🆕 New Booking #${booking_id}
+👤 Guest: ${guest_name}
+📍 From: ${pickup}
+📍 To: ${dropoff}
+🚗 Vehicle: ${vehicle_type}
+📞 Phone: ${phone}
+📅 Date: ${date_time}
+`;
 
-    let conn; // Declare conn outside try block for finally
-    try {
-        // --- FIX: Connect to Railway RabbitMQ using environment variable ---
-        const RABBITMQ_URL = process.env.RABBITMQ_URL;
-        if (!RABBITMQ_URL) {
-            console.error("❌ RABBITMQ_URL environment variable is not set. Cannot connect to RabbitMQ.");
-            // Even if RabbitMQ connection fails, we can still respond that booking was saved
-            return res.status(500).send({ message: 'Booking saved, but RabbitMQ URL is missing.' });
-        }
+    try {
+      console.log('📤 Attempting to send Telegram message...');
+      await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+        chat_id: TELEGRAM_CHAT_ID,
+        text: message
+      });
+      console.log('✅ Telegram message sent!');
+    } catch (err) {
+      console.error('❌ Telegram send failed:', err.response?.data || err.message);
+    }
 
-        conn = await amqp.connect(RABBITMQ_URL); // <--- CORRECTED LINE!
-        const channel = await conn.createChannel();
-        const queue = 'ride_requests'; // Use the correct queue name
-
-        await channel.assertQueue(queue, { durable: true });
-        channel.sendToQueue(queue, Buffer.from(JSON.stringify(bookingData)), { persistent: true }); // Use 'queue' variable
-
-
-      console.log('📤 Sent booking to vendor queue');
-
-      res.status(201).send({ message: "Booking created and sent to vendor", booking_id });
-
-    } catch (error) {
-      console.error('❌ Failed to notify vendor via RabbitMQ:', error);
-      res.status(500).send({ message: 'Booking saved, but failed to notify vendor.' });
-    } finally { // Ensure connection is closed even if there's an error
-        if (conn) {
-            setTimeout(() => {
-                conn.close();
-            }, 500); // Give a little time for message to be sent
-        }
-    }
-  });
-});
-
-// ✅ GET bookings by phone number
-router.get('/by-phone/:phone', (req, res) => {
-  const phone = req.params.phone;
-
-  const sql = `SELECT * FROM rides WHERE phone = ? ORDER BY id DESC`;
-
-  db.query(sql, [phone], (err, results) => {
-    if (err) {
-      console.error('Error fetching bookings:', err);
-      return res.status(500).send({ message: 'Server error' });
-    }
-
-    res.status(200).send(results);
-  });
-});
-
-// ✅ GET booking by ID (used in frontend and vendor)
-router.get('/by-id/:id', (req, res) => {
-  const bookingId = req.params.id;
-
-  db.query(
-    'SELECT id, guest_name, pickup, dropoff, status AS vendor_status FROM rides WHERE id = ?',
-    [bookingId],
-    (err, results) => {
-      if (err) {
-        console.error('Error fetching booking by ID:', err);
-        return res.status(500).json({ error: 'Database error' });
-      }
-      res.json(results);
-    }
-  );
-});
-
-// ✅ DELETE a booking by ID
-router.delete('/:booking_id', (req, res) => {
-  const bookingId = req.params.booking_id;
-  console.log('DELETE request for booking ID:', bookingId);
-
-  const sql = 'DELETE FROM rides WHERE id = ?';
-  db.query(sql, [bookingId], (err, result) => {
-    if (err) {
-      console.error('Error deleting booking:', err);
-      return res.status(500).send({ message: 'Failed to cancel booking' });
-    }
-
-    if (result.affectedRows === 0) {
-      return res.status(404).send({ message: 'Booking not found' });
-    }
-
-    res.send({ message: 'Booking cancelled successfully' });
-  });
+    res.status(200).json({ id: booking_id, message: 'Booking created successfully' });
+  } catch (err) {
+    console.error('❌ Booking error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 module.exports = router;
-
