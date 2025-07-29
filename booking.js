@@ -75,7 +75,7 @@ router.post('/', async (req, res) => {
 
         conn = await amqp.connect(RABBITMQ_URL); // <--- CORRECTED LINE!
         const channel = await conn.createChannel();
-        const queue = 'booking_requests'; // Use the correct queue name
+        const queue = 'ride_requests'; // Use the correct queue name
 
         await channel.assertQueue(queue, { durable: true });
         channel.sendToQueue(queue, Buffer.from(JSON.stringify(bookingData)), { persistent: true }); // Use 'queue' variable
