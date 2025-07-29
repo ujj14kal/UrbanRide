@@ -64,7 +64,7 @@ router.get('/', async (req, res) => {
   }
 
   try {
-    let [rides];
+    let rides = [];
     if (id) {
       [rides] = await db.query('SELECT * FROM rides WHERE id = ?', [id]);
     } else {
@@ -101,7 +101,5 @@ router.delete('/:id', async (req, res) => {
 });
 
 module.exports = router;
-
-
 
 
