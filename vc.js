@@ -1,5 +1,6 @@
 require('dotenv').config(); // ✅ Load environment variables from .env
 
+const generateAndSendInvoice = require('./invoice'); // Adjust path if necessary
 const amqp = require('amqplib');
 const TelegramBot = require('node-telegram-bot-api');
 const mysql = require('mysql2/promise'); // ✅ Use the promise-based version
