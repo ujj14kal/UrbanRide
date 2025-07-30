@@ -7,10 +7,10 @@ const mysql = require('mysql2');
 const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://localhost';
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
-const MYSQL_HOST = process.env.MYSQL_HOST;
-const MYSQL_USER = process.env.MYSQL_USER;
-const MYSQL_PASSWORD = process.env.MYSQL_PASSWORD;
-const MYSQL_DATABASE = process.env.MYSQL_DATABASE;
+const MYSQL_HOST = process.env.MYSQLHOST;
+const MYSQL_USER = process.env.MYSQLUSER;
+const MYSQL_PASSWORD = process.env.MYSQLPASSWORD;
+const MYSQL_DATABASE = process.env.MYSQLDATABASE;
 
 if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
     console.error('❌ Missing Telegram bot token or chat ID environment variables.');
@@ -22,10 +22,10 @@ const bot = new TelegramBot(TELEGRAM_BOT_TOKEN, { polling: true });
 
 // MySQL config
 const db = mysql.createConnection({
-    host: MYSQL_HOST,
-    user: MYSQL_USER,
-    password: MYSQL_PASSWORD,
-    database: MYSQL_DATABASE
+    host: MYSQLHOST,
+    user: MYSQLUSER,
+    password: MYSQLPASSWORD,
+    database: MYSQLDATABASE
 });
 
 // Send booking message to Telegram

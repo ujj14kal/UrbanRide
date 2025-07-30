@@ -1,3 +1,4 @@
+// db.js
 const mysql = require('mysql2');
 require('dotenv').config();
 
@@ -14,10 +15,12 @@ const connection = mysql.createConnection({
 
 connection.connect((err) => {
   if (err) {
-    console.error('MySQL connection error:', err);
+    console.error('❌ MySQL connection error:', err);
     return;
   }
-  console.log('Connected to Railway MySQL database!');
+  console.log('✅ Connected to Railway MySQL database!');
 });
 
-module.exports = connection;
+// Export promise-based wrapper so `await db.execute(...)` works
+module.exports = connection.promise();
+
