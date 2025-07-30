@@ -53,7 +53,6 @@ router.post('/', async (req, res) => {
         // Set the initial status since the frontend doesn't provide one
         const initialStatus = 'pending'; 
 
-        // Single-line SQL query to avoid syntax errors from formatting
         const sql = 'INSERT INTO rides (guest_name, passengers, email, phone, address, trip_type, pickup, dropoff, date_time, vehicle_type, status, associated_member) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
 
         const values = [
@@ -67,7 +66,7 @@ router.post('/', async (req, res) => {
             dropoff,
             date_time,
             vehicle_type,
-            initialStatus, // Using the default status
+            initialStatus,
             associated_member,
         ];
 
@@ -76,7 +75,7 @@ router.post('/', async (req, res) => {
         const insertedBooking = {
             id: result.insertId,
             ...req.body,
-            status: initialStatus // Add the status to the returned object
+            status: initialStatus
         };
 
         if (channel) {
@@ -93,7 +92,29 @@ router.post('/', async (req, res) => {
     }
 });
 
-// GET /api/bookings?phone=xxx or ?id=xxx
+// ✅ NEW ROUTE: GET /api/bookings/by-phone/:phoneNumber — Get bookings by phone number from URL parameter
+router.get('/by-phone/:phoneNumber', async (req, res) => {
+    const phoneNumber = req.params.phoneNumber;
+
+    if (!phoneNumber) {
+        return res.status(400).json({ success: false, error: 'Phone number is required.' });
+    }
+
+    try {
+        const [rows] = await pool.query('SELECT * FROM rides WHERE phone = ? ORDER BY id DESC', [phoneNumber]);
+        
+        if (rows.length === 0) {
+             return res.status(404).json({ success: false, message: 'No bookings found for this number.' });
+        }
+        
+        res.json(rows); // Return the array of bookings directly
+    } catch (error) {
+        console.error('❌ Fetch Error:', error.message);
+        res.status(500).json({ success: false, error: 'Server error' });
+    }
+});
+
+// GET /api/bookings?phone=xxx or ?id=xxx (This route is kept for backward compatibility)
 router.get('/', async (req, res) => {
     const { phone, id } = req.query;
     try {
@@ -111,7 +132,7 @@ router.get('/', async (req, res) => {
         }
 
         const [rows] = await pool.query(sql, [param]);
-        res.json({ success: true, bookings: rows });
+        res.json(rows); // Return the array of bookings directly
     } catch (error) {
         console.error('❌ Fetch Error:', error.message);
         res.status(500).json({ success: false, error: 'Server error' });
