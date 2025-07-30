@@ -11,11 +11,11 @@ async function connectQueue() {
         connection = await amqp.connect(process.env.RABBITMQ_URL);
         connection.on('error', (err) => {
             console.error('❌ RabbitMQ connection error:', err.message);
-            setTimeout(connectQueue, 5000); // Attempt to reconnect after 5 seconds
+            setTimeout(connectQueue, 5000);
         });
         connection.on('close', () => {
             console.error('❌ RabbitMQ connection closed. Reconnecting...');
-            setTimeout(connectQueue, 5000); // Attempt to reconnect after 5 seconds
+            setTimeout(connectQueue, 5000);
         });
 
         channel = await connection.createChannel();
@@ -23,7 +23,7 @@ async function connectQueue() {
         console.log('✅ Connected to RabbitMQ');
     } catch (error) {
         console.error('❌ RabbitMQ connection error:', error.message);
-        setTimeout(connectQueue, 5000); // Attempt to reconnect after 5 seconds
+        setTimeout(connectQueue, 5000);
     }
 }
 connectQueue();
@@ -45,13 +45,11 @@ router.post('/', async (req, res) => {
             associated_member,
         } = req.body;
 
-        // Validation for required fields
         if (!guest_name || !phone || !pickup || !dropoff || !date_time || !vehicle_type) {
             return res.status(400).json({ error: 'Missing required fields' });
         }
 
-        // Set the initial status since the frontend doesn't provide one
-        const initialStatus = 'pending'; 
+        const initialStatus = 'pending';
 
         const sql = 'INSERT INTO rides (guest_name, passengers, email, phone, address, trip_type, pickup, dropoff, date_time, vehicle_type, status, associated_member) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
 
@@ -92,7 +90,7 @@ router.post('/', async (req, res) => {
     }
 });
 
-// ✅ NEW ROUTE: GET /api/bookings/by-phone/:phoneNumber — Get bookings by phone number from URL parameter
+// ✅ NEW ROUTE: GET /api/bookings/by-phone/:phoneNumber
 router.get('/by-phone/:phoneNumber', async (req, res) => {
     const phoneNumber = req.params.phoneNumber;
 
@@ -107,14 +105,14 @@ router.get('/by-phone/:phoneNumber', async (req, res) => {
              return res.status(404).json({ success: false, message: 'No bookings found for this number.' });
         }
         
-        res.json(rows); // Return the array of bookings directly
+        res.json(rows);
     } catch (error) {
         console.error('❌ Fetch Error:', error.message);
         res.status(500).json({ success: false, error: 'Server error' });
     }
 });
 
-// GET /api/bookings?phone=xxx or ?id=xxx (This route is kept for backward compatibility)
+// ✅ FIXED: GET /api/bookings with "bookings" key
 router.get('/', async (req, res) => {
     const { phone, id } = req.query;
     try {
@@ -132,14 +130,14 @@ router.get('/', async (req, res) => {
         }
 
         const [rows] = await pool.query(sql, [param]);
-        res.json(rows); // Return the array of bookings directly
+        res.json({ bookings: rows }); // ✅ fixed line
     } catch (error) {
         console.error('❌ Fetch Error:', error.message);
         res.status(500).json({ success: false, error: 'Server error' });
     }
 });
 
-// DELETE /api/bookings/:id — Cancel booking
+// DELETE /api/bookings/:id
 router.delete('/:id', async (req, res) => {
     try {
         const bookingId = req.params.id;
