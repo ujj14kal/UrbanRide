@@ -1,9 +1,20 @@
 const amqp = require('amqplib');
 const axios = require('axios');
+const TelegramBot = require('node-telegram-bot-api');
+const mysql = require('mysql2');
 
 // Telegram config
 const TELEGRAM_BOT_TOKEN = '8313019141:AAFQSebv9QQSmvCzZni7-RnSM2ovcn3JKvs';
-const TELEGRAM_CHAT_ID = '7596524752'; // Replace with your actual Telegram chat ID
+const TELEGRAM_CHAT_ID = '7596524752'; // Your Telegram user ID
+const bot = new TelegramBot(TELEGRAM_BOT_TOKEN, { polling: true });
+
+// MySQL config
+const db = mysql.createConnection({
+    host: 'your_host',       // e.g., 'localhost' or Railway host
+    user: 'your_user',
+    password: 'your_password',
+    database: 'your_database'
+});
 
 // Send booking message to Telegram
 function sendToTelegram(booking) {
@@ -15,21 +26,50 @@ function sendToTelegram(booking) {
 *Pickup:* ${booking.pickup}
 *Dropoff:* ${booking.dropoff}
 *Booking ID:* ${booking.id}
-
-📲 Reply with:
-/accept_${booking.id}
-/reject_${booking.id}
-/open_${booking.id}
 `;
 
-    console.log("📤 Sending to Telegram:", message); // Debug log
+    const options = {
+        parse_mode: 'Markdown',
+        reply_markup: {
+            inline_keyboard: [[
+                { text: '✅ Accept', callback_data: `accept_${booking.id}` },
+                { text: '❌ Reject', callback_data: `reject_${booking.id}` },
+                { text: '📤 Open Market', callback_data: `open_${booking.id}` }
+            ]]
+        }
+    };
 
-    return axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-        chat_id: TELEGRAM_CHAT_ID,
-        text: message,
-        parse_mode: 'Markdown'
-    });
+    return bot.sendMessage(TELEGRAM_CHAT_ID, message, options);
 }
+
+// Handle Telegram button responses
+bot.on('callback_query', (query) => {
+    const action = query.data.split('_')[0];
+    const rideId = query.data.split('_')[1];
+    let newStatus;
+
+    if (action === 'accept') newStatus = 'accepted';
+    else if (action === 'reject') newStatus = 'rejected';
+    else if (action === 'open') newStatus = 'open_market';
+
+    if (newStatus) {
+        db.query(
+            'UPDATE rides SET status = ? WHERE id = ?',
+            [newStatus, rideId],
+            (err, result) => {
+                if (err) {
+                    console.error('❌ DB update error:', err);
+                    bot.sendMessage(TELEGRAM_CHAT_ID, `⚠️ Failed to update booking ${rideId}`);
+                } else {
+                    console.log(`✅ Booking ${rideId} updated to ${newStatus}`);
+                    bot.sendMessage(TELEGRAM_CHAT_ID, `✅ Booking *${rideId}* marked as *${newStatus}*`, { parse_mode: 'Markdown' });
+                }
+            }
+        );
+    }
+
+    bot.answerCallbackQuery(query.id); // Acknowledge button press
+});
 
 // Connect to RabbitMQ and consume messages
 async function receiveMessages() {
@@ -52,7 +92,7 @@ async function receiveMessages() {
                 channel.ack(msg);
             } catch (error) {
                 console.error('❌ Failed to send to Telegram:', error.response?.data || error.message);
-                channel.nack(msg, false, true); // Retry if sending fails
+                channel.nack(msg, false, true);
             }
         }, { noAck: false });
 
@@ -62,3 +102,4 @@ async function receiveMessages() {
 }
 
 receiveMessages();
+
