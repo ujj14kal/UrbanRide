@@ -235,11 +235,12 @@
 
         const result = await response.json();
 
-        if (result.booking_id) { // Simplified check based on typical success response
-          showPopupMessage('success', `✅ Booking successful! ID: ${result.booking_id} \nRedirecting...`);
+        // FIX: Correctly access the booking ID from the response
+        if (result.success && result.booking && result.booking.id) {
+          showPopupMessage('success', `✅ Booking successful! ID: ${result.booking.id} \nRedirecting...`);
           form.reset();
           setTimeout(() => {
-            window.location.href = `/html/confirmation.html?booking_id=${result.booking_id}`;
+            window.location.href = `/html/confirmation.html?booking_id=${result.booking.id}`;
           }, 3000);
         } else {
           showPopupMessage('error', result.message || '❌ Something went wrong with booking. Check server logs.');
