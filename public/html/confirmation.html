@@ -231,12 +231,13 @@
         async function fetchBookingDetails(bookingId) {
             const infoEl = document.getElementById('info');
             try {
-                const res = await fetch(`${RENDER_BACKEND_URL}/api/bookings/by-id/${bookingId}`);
+                // ✅ FIX: Change the fetch URL to use a query parameter
+                const res = await fetch(`${RENDER_BACKEND_URL}/api/bookings?id=${bookingId}`);
                 if (!res.ok) {
                     throw new Error(`HTTP error! status: ${res.status}`);
                 }
                 const data = await res.json();
-                const booking = data[0];
+                const booking = data.bookings[0];
 
                 if (!booking) {
                     infoEl.textContent = 'Booking not found.';
@@ -293,18 +294,19 @@
 
         async function fetchVendorStatus() {
             try {
-                const res = await fetch(`${RENDER_BACKEND_URL}/api/bookings/by-id/${vendorBookingId}`);
+                // ✅ FIX: Change the fetch URL to use a query parameter
+                const res = await fetch(`${RENDER_BACKEND_URL}/api/bookings?id=${vendorBookingId}`);
                 if (!res.ok) {
                     throw new Error(`HTTP error! status: ${res.status}`);
                 }
                 const data = await res.json();
 
-                if (!data || !data[0] || !data[0].vendor_status) {
+                if (!data || !data.bookings || !data.bookings[0] || !data.bookings[0].status) {
                     console.warn("No booking data or vendor status found for ID:", vendorBookingId);
                     return;
                 }
 
-                const currentStatus = data[0].vendor_status.toLowerCase();
+                const currentStatus = data.bookings[0].status.toLowerCase();
 
                 if (currentStatus !== previousStatus) {
                     previousStatus = currentStatus;
@@ -333,7 +335,6 @@
                 console.error('Error fetching booking status:', err);
             }
         }
-
 
         // Event listeners and initial calls
         document.addEventListener('DOMContentLoaded', () => {
