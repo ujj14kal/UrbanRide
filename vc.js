@@ -16,7 +16,7 @@ const MYSQL_HOST = process.env.MYSQLHOST;
 const MYSQL_USER = process.env.MYSQLUSER;
 const MYSQL_PASSWORD = process.env.MYSQLPASSWORD;
 const MYSQL_DATABASE = process.env.MYSQLDATABASE;
-const MYSQL_PORT = process.env.MYSQLPORT; // ✅ Add MYSQL_PORT declaration
+
 
 if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
     console.error('❌ Missing Telegram bot token or chat ID environment variables.');
