@@ -1,7 +1,7 @@
 const PDFDocument = require('pdfkit');
 const path = require('path');
 
-function generateInvoiceStream(booking, res) {
+function generateInvoiceStream(res, booking) {
   const doc = new PDFDocument({ margin: 50 });
 
   // Stream PDF to browser
