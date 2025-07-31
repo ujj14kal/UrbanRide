@@ -9,6 +9,8 @@ const axios = require('axios');
 const db = require('./db'); // adjust if needed
 const bookingRoutes = require('./booking');
 
+const invoiceRoutes = require('./invoices');
+
 dotenv.config();
 
 const app = express();
@@ -56,6 +58,9 @@ app.post('/directions', async (req, res) => {
 
 // ✅ Booking routes
 app.use('/api/bookings', bookingRoutes);
+
+app.use('/invoice', invoiceRoutes);
+
 
 // ✅ TELEGRAM WEBHOOK HANDLER
 app.post('/telegram-update', async (req, res) => {

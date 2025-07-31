@@ -58,6 +58,9 @@
             </span>
         </div>
 
+        <a id="downloadInvoice" href="#" style="display: none;" download>Download Invoice</a>
+
+
         <audio id="accept-sound" src="/audio/correct-356013.mp3" preload="auto"></audio>
         <audio id="reject-sound" src="/audio/denied-sound-39708.mp3" preload="auto"></audio>
 
@@ -354,5 +357,36 @@
             }
         });
     </script>
+
+<script>
+  const bookingId = new URLSearchParams(window.location.search).get('booking_id');
+
+  function checkBookingStatus(bookingId) {
+    fetch(`/booking-status/${bookingId}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'accepted') {
+          const link = document.getElementById('downloadInvoice');
+          link.href = `/download-invoice/${bookingId}`;
+          link.style.display = 'inline-block';
+        }
+      });
+  }
+
+  // Poll every 5 seconds
+  function startStatusPolling(bookingId) {
+    checkBookingStatus(bookingId); // initial check
+    setInterval(() => {
+      checkBookingStatus(bookingId);
+    }, 5000);
+  }
+
+  // ✅ Start polling if bookingId is available
+  if (bookingId) {
+    startStatusPolling(bookingId);
+  }
+</script>
+
+
 </body>
 </html>

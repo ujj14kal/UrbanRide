@@ -4,6 +4,8 @@ require('dotenv').config(); // ✅ Load environment variables from .env
 const amqp = require('amqplib');
 const TelegramBot = require('node-telegram-bot-api');
 const mysql = require('mysql2/promise'); // ✅ Use the promise-based version
+const { generateInvoice } = require('./invoice'); //Generates invoice
+
 
 // === Environment Variables ===
 const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://localhost';
@@ -97,6 +99,19 @@ bot.on('callback_query', async (query) => {
             'UPDATE rides SET status = ? WHERE id = ?',
             [newStatus, rideId]
         );
+if (newStatus === 'accepted') {
+  // 🔄 Fetch the booking again to pass complete data to the invoice generator
+  const [rows] = await pool.query('SELECT * FROM rides WHERE id = ?', [rideId]);
+  const booking = rows[0];
+
+  if (booking) {
+    await generateInvoice(booking);
+    console.log(`🧾 Invoice generated for ride ID ${rideId}`);
+  } else {
+    console.warn(`⚠️ Booking not found for invoice generation: ID ${rideId}`);
+  }
+}
+        // ✅ Log the update and send confirmation to Telegram
         console.log(`✅ Booking ${rideId} updated to ${newStatus}`);
         bot.sendMessage(TELEGRAM_CHAT_ID, `✅ Booking *${rideId}* marked as *${newStatus}*`, { parse_mode: 'Markdown' });
     } catch (err) {
