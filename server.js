@@ -83,7 +83,7 @@ app.post('/telegram-update', async (req, res) => {
   else if (action === 'openmarket') newStatus = 'open_market';
 
   try {
-    await db.query('UPDATE bookings SET status = ? WHERE id = ?', [newStatus, bookingId]);
+    await db.query('UPDATE rides SET status = ? WHERE id = ?', [newStatus, bookingId]);
 
     // Send reply back to Telegram (optional)
     await axios.post(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {

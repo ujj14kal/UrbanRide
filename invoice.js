@@ -1,18 +1,43 @@
-// invoice.js
+// invoice.js (or invoiceGenerator.js)
+
+const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const path = require('path');
-const express = require('express');
-const router = express.Router();
 
-// Serve the PDF invoice if it exists
-router.get('/:id', (req, res) => {
-  const invoicePath = path.join(process.cwd(), 'invoices', `invoice_${req.params.id}.pdf`);
+async function generateInvoice(booking) {
+  return new Promise((resolve, reject) => {
+    try {
+      const invoicesDir = path.join(process.cwd(), 'invoices');
+      if (!fs.existsSync(invoicesDir)) fs.mkdirSync(invoicesDir);
 
-  if (fs.existsSync(invoicePath)) {
-    res.sendFile(invoicePath);
-  } else {
-    res.status(404).send('Invoice not found');
-  }
-});
+      const invoicePath = path.join(invoicesDir, `invoice_${booking.id}.pdf`);
+      const doc = new PDFDocument();
 
-module.exports = router;
+      const stream = fs.createWriteStream(invoicePath);
+      doc.pipe(stream);
+
+      doc.fontSize(20).text('UrbanRide Invoice', { align: 'center' });
+      doc.moveDown();
+
+      doc.fontSize(14).text(`Booking ID: ${booking.id}`);
+      doc.text(`Guest Name: ${booking.guest_name}`);
+      doc.text(`Phone: ${booking.phone}`);
+      doc.text(`Pickup: ${booking.pickup}`);
+      doc.text(`Dropoff: ${booking.dropoff}`);
+      doc.text(`Associated Member: ${booking.associated_member || 'N/A'}`);
+
+      doc.end();
+
+      stream.on('finish', () => {
+        console.log(`Invoice generated at ${invoicePath}`);
+        resolve(invoicePath);
+      });
+
+      stream.on('error', reject);
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+
+module.exports = { generateInvoice };
