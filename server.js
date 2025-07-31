@@ -9,7 +9,7 @@ const axios = require('axios');
 const db = require('./db'); // adjust if needed
 const bookingRoutes = require('./booking');
 
-const invoiceRoutes = require('./invoices');
+const invoiceRoutes = require('./invoice');
 
 dotenv.config();
 
