@@ -28,23 +28,21 @@ app.get('/', (req, res) => {
 // Add this line to enable invoice routes
 app.use('/invoice', invoiceRouter);
 
-// --- ADD THIS NEW ROUTE ---
-// ✅ API Endpoint to get booking status by ID
-app.get('/booking-status/:id', async (req, res) => {
-    const bookingId = req.params.id;
-    try {
-        const [rows] = await db.query('SELECT status FROM rides WHERE id = ?', [bookingId]);
-        if (rows.length > 0) {
-            res.json({ status: rows[0].status });
-        } else {
-            res.status(404).json({ error: 'Booking not found' });
-        }
-    } catch (error) {
-        console.error('Error fetching booking status:', error.message);
-        res.status(500).json({ error: 'Failed to fetch booking status' });
-    }
-});
-// --- END NEW ROUTE ---
+// Removed: Redundant API Endpoint to get booking status by ID
+// app.get('/booking-status/:id', async (req, res) => {
+//     const bookingId = req.params.id;
+//     try {
+//         const [rows] = await db.query('SELECT status FROM rides WHERE id = ?', [bookingId]);
+//         if (rows.length > 0) {
+//             res.json({ status: rows[0].status });
+//         } else {
+//             res.status(404).json({ error: 'Booking not found' });
+//         }
+//     } catch (error) {
+//         console.error('Error fetching booking status:', error.message);
+//         res.status(500).json({ error: 'Failed to fetch booking status' });
+//     }
+// });
 
 
 // ✅ Directions API Endpoint
@@ -78,7 +76,7 @@ app.post('/directions', async (req, res) => {
     }
 });
 
-// ✅ Booking routes
+// ✅ Booking routes (This is where /api/bookings?id=... is handled)
 app.use('/api/bookings', bookingRoutes);
 
 

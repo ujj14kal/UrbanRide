@@ -287,17 +287,17 @@
             }
         }
 
-        // Function to poll vendor status
+        // Function to poll vendor status and display invoice link
         const vendorBookingId = new URLSearchParams(window.location.search).get('booking_id');
         const vendorStatusEl = document.getElementById('vendor-status-badge');
         const acceptSound = document.getElementById('accept-sound');
         const rejectSound = document.getElementById('reject-sound');
+        const downloadInvoiceLink = document.getElementById('downloadInvoice'); // Get the download link element
 
         let previousStatus = 'pending';
 
         async function fetchVendorStatus() {
             try {
-                // ✅ FIX: Change the fetch URL to use a query parameter
                 const res = await fetch(`${RENDER_BACKEND_URL}/api/bookings?id=${vendorBookingId}`);
                 if (!res.ok) {
                     throw new Error(`HTTP error! status: ${res.status}`);
@@ -319,19 +319,27 @@
                         vendorStatusEl.textContent = 'Accepted';
                         vendorStatusEl.style.backgroundColor = '#4CAF50';
                         vendorStatusEl.style.color = 'white';
+                        // ✅ INTEGRATED: Show and set the invoice download link
+                        downloadInvoiceLink.href = `${RENDER_BACKEND_URL}/invoice/${vendorBookingId}`;
+                        downloadInvoiceLink.style.display = 'inline-block';
                     } else if (currentStatus === 'rejected') {
                         rejectSound.play();
                         vendorStatusEl.textContent = 'Rejected';
                         vendorStatusEl.style.backgroundColor = '#f44336';
                         vendorStatusEl.style.color = 'white';
+                        // ✅ HIDE: Hide invoice link if rejected
+                        downloadInvoiceLink.style.display = 'none';
                     } else if (currentStatus === 'open_market') {
                         vendorStatusEl.textContent = 'Moved to Open Market';
                         vendorStatusEl.style.backgroundColor = '#ff9800';
                         vendorStatusEl.style.color = 'white';
+                         // ✅ HIDE: Hide invoice link if moved to open market
+                        downloadInvoiceLink.style.display = 'none';
                     } else {
                         vendorStatusEl.textContent = 'Pending';
                         vendorStatusEl.style.backgroundColor = '#ccc';
                         vendorStatusEl.style.color = '#333';
+                        downloadInvoiceLink.style.display = 'none';
                     }
                 }
             } catch (err) {
@@ -357,36 +365,5 @@
             }
         });
     </script>
-
-<script>
-  const bookingId = new URLSearchParams(window.location.search).get('booking_id');
-
-  function checkBookingStatus(bookingId) {
-    fetch(`/booking-status/${bookingId}`)
-      .then(res => res.json())
-      .then(data => {
-        if (data.status === 'accepted') {
-          const link = document.getElementById('downloadInvoice');
-          link.href = `/download-invoice/${bookingId}`;
-          link.style.display = 'inline-block';
-        }
-      });
-  }
-
-  // Poll every 5 seconds
-  function startStatusPolling(bookingId) {
-    checkBookingStatus(bookingId); // initial check
-    setInterval(() => {
-      checkBookingStatus(bookingId);
-    }, 5000);
-  }
-
-  // ✅ Start polling if bookingId is available
-  if (bookingId) {
-    startStatusPolling(bookingId);
-  }
-</script>
-
-
 </body>
 </html>
