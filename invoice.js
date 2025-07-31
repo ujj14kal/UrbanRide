@@ -8,7 +8,7 @@ function generateInvoiceStream(res, booking) {
   doc.pipe(res);
 
   // === 1. Add Logo ===
-  const logoPath = path.join(__dirname, 'public', 'images', 'urbanride_logo.png');
+  const logoPath = path.join(__dirname, 'public', 'images', 'logo.png');
   doc.image(logoPath, doc.page.width / 2 - 50, 20, { width: 100 }); // Centered
 
   // === 2. Heading ===
