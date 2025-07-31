@@ -1,29 +1,30 @@
 const express = require('express');
-const path = require('path');
-const fs = require('fs');
 const router = express.Router();
+const { generateInvoiceStream } = require('./invoice'); // Make sure invoice.js exports this function
+const db = require('./db'); // Adjust based on where your DB connection is
 
-router.get('/:id', (req, res) => {
-  const invoiceId = req.params.id; // Store the ID for filename
-  const invoicePath = path.join(process.cwd(), 'invoices', `invoice_${invoiceId}.pdf`);
+// Route: /invoice/:id
+router.get('/:id', async (req, res) => {
+  const invoiceId = req.params.id;
 
-  if (fs.existsSync(invoicePath)) {
-    // ⭐ IMPORTANT: CHANGE THIS LINE FROM res.sendFile TO res.download ⭐
-    res.download(invoicePath, `invoice_${invoiceId}.pdf`, (err) => {
-      if (err) {
-        console.error(`❌ Error downloading invoice ${invoiceId}:`, err);
-        // Handle specific error codes or just send a generic 500
-        if (err.code === 'ENOENT') { // File not found on the server
-          return res.status(404).send('Invoice file not found on server.');
-        }
-        res.status(500).send('Failed to download invoice.');
-      } else {
-        console.log(`✅ Invoice ${invoiceId}.pdf sent successfully.`);
-      }
-    });
-  } else {
-    console.warn(`⚠️ Invoice file not found at: ${invoicePath}`);
-    res.status(404).send('Invoice not found');
+  try {
+    const [rows] = await db.query('SELECT * FROM rides WHERE id = ?', [invoiceId]);
+
+    if (!rows.length) {
+      return res.status(404).send('Booking not found');
+    }
+
+    const booking = rows[0];
+
+    // Set headers to trigger browser download
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=invoice_${invoiceId}.pdf`);
+
+    // Pipe PDF directly to response
+    generateInvoiceStream(res, booking);
+  } catch (err) {
+    console.error(`❌ Error generating invoice ${invoiceId}:`, err);
+    res.status(500).send('Failed to generate invoice');
   }
 });
 

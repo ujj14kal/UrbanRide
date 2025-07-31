@@ -3,6 +3,8 @@ const router = express.Router();
 const pool = require('./db');
 const amqp = require('amqplib');
 
+
+
 let channel, connection;
 
 // Connect to RabbitMQ with a reconnection loop
