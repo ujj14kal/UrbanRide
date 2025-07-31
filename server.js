@@ -9,7 +9,11 @@ const axios = require('axios');
 const db = require('./db'); // adjust if needed
 const bookingRoutes = require('./booking');
 
-const invoiceRoutes = require('./invoice');
+
+const invoiceRouter = require('./invoiceRouter');
+
+
+
 
 dotenv.config();
 
@@ -24,6 +28,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public/html', 'index.html'));
 });
+
+// Add this line to enable invoice routes
+app.use('/invoice', invoiceRouter);
 
 // ✅ Directions API Endpoint
 app.post('/directions', async (req, res) => {
@@ -59,7 +66,7 @@ app.post('/directions', async (req, res) => {
 // ✅ Booking routes
 app.use('/api/bookings', bookingRoutes);
 
-app.use('/invoice', invoiceRoutes);
+
 
 
 // ✅ TELEGRAM WEBHOOK HANDLER
