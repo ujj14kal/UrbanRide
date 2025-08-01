@@ -55,7 +55,7 @@ app.post('/directions', async (req, res) => {
         return res.status(400).json({ error: 'Origin and destination are required.' });
     }
 
-    const apiKey = process.env.Maps_API_KEY;
+    const apiKey = process.env.GOOGLE_MAPS_API_KEY;
     const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${origin}&destination=${destination}&key=${apiKey}&traffic_model=best_guess&departure_time=now`;
 
     try {
