@@ -3,94 +3,40 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>UrbanRide - My Account</title>
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      background-color: #f7f7f7;
-      color: #333;
-    }
-    header {
-      background-color: #222;
-      color: white;
-      padding: 15px;
-      text-align: center;
-    }
-    main {
-      max-width: 900px;
-      margin: auto;
-      padding: 20px;
-    }
-    .account-form {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 20px;
-    }
-    input, button {
-      padding: 10px;
-      font-size: 16px;
-    }
-    button {
-      background: #007bff;
-      border: none;
-      color: white;
-      cursor: pointer;
-    }
-    button:hover {
-      background: #0056b3;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-      background: white;
-    }
-    th, td {
-      border: 1px solid #ddd;
-      padding: 8px;
-      text-align: left;
-    }
-    th {
-      background: #f0f0f0;
-    }
-    /* Mobile cards */
-    .mobile-card {
-      display: none;
-      background: white;
-      border: 1px solid #ddd;
-      margin: 10px 0;
-      padding: 10px;
-    }
-    @media (max-width: 768px) {
-      table {
-        display: none;
-      }
-      .mobile-card {
-        display: block;
-      }
-    }
-  </style>
+  <title>Your Account - UrbanRide</title>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+  <link rel="stylesheet" href="/css/account.css" />
+  <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-auth-compat.js"></script>
 </head>
 <body>
-  <header>
-    <h1>UrbanRide - My Account</h1>
+  <header class="navbar">
+    <div class="logo">UrbanRide</div>
+    <nav>
+      <a href="/html/index.html">Home</a>
+      <a href="/html/booking.html" class="book-now">Book Now</a>
+    </nav>
   </header>
-  <main>
-    <div class="account-form">
-      <input type="text" id="phoneNumber" placeholder="+91 9876543210" />
+
+  <main class="account-section">
+    <h1>Your Account</h1>
+    <p>Enter your mobile number to access your bookings</p>
+
+    <!-- Phone Number Form -->
+    <form class="account-form" id="phoneForm">
+      <input type="tel" placeholder="Enter your mobile number" name="mobile" required />
       <div id="recaptcha-container"></div>
-      <button id="sendOtpBtn">Send OTP</button>
-    </div>
+      <button type="submit" id="sendOtpBtn">Send OTP</button>
+    </form>
 
-    <div class="account-form" id="otpSection" style="display:none;">
-      <input type="text" id="otpInput" placeholder="Enter OTP" />
-      <button id="verifyOtpBtn">Verify OTP</button>
-    </div>
+    <!-- OTP Verification Form -->
+    <form class="account-form" id="otpForm" style="display:none;">
+      <input type="text" placeholder="Enter OTP" id="otpInput" required />
+      <button type="submit" id="verifyOtpBtn">Verify OTP</button>
+    </form>
 
-    <div id="bookingsTableContainer">
+    <!-- Bookings Table -->
+    <div class="table-wrapper" style="display:none;" id="bookingsSection">
       <table id="bookingsTable">
         <thead>
           <tr>
@@ -112,85 +58,144 @@
       </table>
     </div>
 
-    <div id="mobileCardsContainer"></div>
+    <!-- Mobile View Cards -->
+    <div id="bookingsTableContainer" style="margin-top: 30px;"></div>
+    <div class="mobile-cards" id="mobileCardsContainer"></div>
   </main>
+
+  <footer class="urbanride-footer">
+    <div class="footer-container">
+      <div class="footer-column">
+        <h4>Company</h4>
+        <ul>
+          <li><a href="#">About us</a></li>
+          <li><a href="#">Our services</a></li>
+          <li><a href="#">Blog</a></li>
+          <li><a href="#">Careers</a></li>
+        </ul>
+      </div>
+      <div class="footer-column">
+        <h4>Products</h4>
+        <ul>
+          <li><a href="#">Ride</a></li>
+          <li><a href="#">Drive</a></li>
+          <li><a href="#">Urban Auto</a></li>
+          <li><a href="#">Urban Moto</a></li>
+        </ul>
+      </div>
+      <div class="footer-column">
+        <h4>Travel</h4>
+        <ul>
+          <li><a href="#">Airports</a></li>
+          <li><a href="#">Cities</a></li>
+        </ul>
+      </div>
+      <div class="footer-column">
+        <h4>Support</h4>
+        <ul>
+          <li><a href="#">Help Center</a></li>
+          <li><a href="#">Contact us</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p class="copyright">©2025 UrbanRide technologies Inc.</p>
+      <span class="footer-brand">UrbanRide</span>
+    </div>
+  </footer>
 
   <script>
     // Firebase config
     const firebaseConfig = {
-      apiKey: "YOUR_FIREBASE_API_KEY",
-      authDomain: "YOUR_FIREBASE_PROJECT.firebaseapp.com",
-      projectId: "YOUR_FIREBASE_PROJECT_ID",
-      storageBucket: "YOUR_FIREBASE_PROJECT.appspot.com",
-      messagingSenderId: "YOUR_SENDER_ID",
-      appId: "YOUR_APP_ID"
+      apiKey: "AIzaSyD2FTLHAoefaLDp33fPYAseWAB3m_F8Kik",
+      authDomain: "urbanride-84afe.firebaseapp.com",
+      projectId: "urbanride-84afe",
+      storageBucket: "urbanride-84afe.appspot.com",
+      messagingSenderId: "302121704417",
+      appId: "1:302121704417:web:d3e320a2232ee77411d0a0",
+      measurementId: "G-ZKV8KCVP3T"
     };
 
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
+    let confirmationResultGlobal;
 
-    let confirmationResultGlobal = null;
+    const phoneForm = document.getElementById('phoneForm');
+    const otpForm = document.getElementById('otpForm');
+    const bookingsSection = document.getElementById('bookingsSection');
+    const tableBody = document.getElementById('tableBody');
+    const mobileCardsContainer = document.getElementById('mobileCardsContainer');
+    const tableContainer = document.getElementById('bookingsTableContainer');
 
-    document.getElementById('sendOtpBtn').addEventListener('click', () => {
-      const phoneNumber = document.getElementById('phoneNumber').value.trim();
-      if (!phoneNumber) {
-        alert("Please enter phone number with country code.");
+    // Send OTP
+    phoneForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      let phone = document.querySelector('input[name="mobile"]').value.trim();
+
+      if (!phone) {
+        alert("Please enter your mobile number.");
         return;
+      }
+
+      // Automatically add +91 if missing
+      if (!phone.startsWith('+')) {
+        phone = '+91' + phone;
       }
 
       window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
         size: 'invisible'
       });
 
-      auth.signInWithPhoneNumber(phoneNumber, window.recaptchaVerifier)
-        .then((confirmationResult) => {
-          confirmationResultGlobal = confirmationResult;
-          document.getElementById('otpSection').style.display = 'flex';
-          alert('OTP sent successfully!');
-        })
-        .catch((error) => {
-          console.error(error);
-          alert('Error sending OTP: ' + error.message);
-        });
+      try {
+        confirmationResultGlobal = await auth.signInWithPhoneNumber(phone, window.recaptchaVerifier);
+        alert('OTP sent to ' + phone);
+        otpForm.style.display = 'block';
+        phoneForm.style.display = 'none';
+      } catch (err) {
+        console.error('Error sending OTP:', err);
+        alert(err.message);
+      }
     });
 
-    document.getElementById('verifyOtpBtn').addEventListener('click', () => {
+    // Verify OTP
+    otpForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
       const otp = document.getElementById('otpInput').value.trim();
       if (!otp) {
-        alert("Please enter the OTP.");
+        alert("Please enter OTP.");
         return;
       }
 
-      confirmationResultGlobal.confirm(otp)
-        .then((result) => {
-          const phone = result.user.phoneNumber;
-          alert('OTP Verified Successfully!');
-          fetchBookings(phone);
-        })
-        .catch((error) => {
-          alert('Invalid OTP: ' + error.message);
-        });
+      try {
+        await confirmationResultGlobal.confirm(otp);
+        alert('OTP verified successfully.');
+        otpForm.style.display = 'none';
+        bookingsSection.style.display = 'block';
+        fetchBookings(document.querySelector('input[name="mobile"]').value.trim());
+      } catch (err) {
+        console.error('Error verifying OTP:', err);
+        alert('Invalid OTP.');
+      }
     });
 
+    // Fetch bookings from backend
     async function fetchBookings(phone) {
       const RENDER_BACKEND_URL = 'https://urbanride.onrender.com';
-      const tableBody = document.getElementById('tableBody');
-      const mobileCardsContainer = document.getElementById('mobileCardsContainer');
-      const tableContainer = document.getElementById('bookingsTableContainer');
-
       tableBody.innerHTML = '';
       mobileCardsContainer.innerHTML = '';
+      tableContainer.innerHTML = '';
 
       try {
         const res = await fetch(`${RENDER_BACKEND_URL}/api/bookings/by-phone/${phone}`);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (!res.ok) throw new Error(`HTTP error! Status: ${res.status}`);
         const data = await res.json();
 
         if (data.length === 0) {
-          tableContainer.innerHTML = '<p style="text-align:center; color: grey;">No bookings found for this number.</p>';
+          tableContainer.innerHTML += '<p style="text-align:center; color: grey;">No bookings found for this number.</p>';
           return;
         }
 
+        // Populate table
         data.forEach(row => {
           const tr = document.createElement('tr');
           tr.innerHTML = `
@@ -210,7 +215,7 @@
           tableBody.appendChild(tr);
         });
 
-        // Mobile cards
+        // Populate mobile cards
         data.forEach(row => {
           const card = document.createElement('div');
           card.className = 'mobile-card';
@@ -232,10 +237,13 @@
         });
 
       } catch (err) {
-        tableContainer.innerHTML = `<p style="color: red;">Error fetching bookings: ${err.message}</p>`;
+        console.error('Error fetching bookings:', err);
+        tableContainer.innerHTML += `<p style="color: red;">Error fetching bookings: ${err.message}.</p>`;
       }
     }
   </script>
 </body>
 </html>
+
+
 
