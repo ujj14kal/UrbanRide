@@ -1,192 +1,241 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Your Account - UrbanRide</title>
-<link rel="icon" type="image/x-icon" href="/favicon.ico" />
-  <link rel="stylesheet" href="/css/account.css" />
-  
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>UrbanRide - My Account</title>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background-color: #f7f7f7;
+      color: #333;
+    }
+    header {
+      background-color: #222;
+      color: white;
+      padding: 15px;
+      text-align: center;
+    }
+    main {
+      max-width: 900px;
+      margin: auto;
+      padding: 20px;
+    }
+    .account-form {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    input, button {
+      padding: 10px;
+      font-size: 16px;
+    }
+    button {
+      background: #007bff;
+      border: none;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      background: white;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background: #f0f0f0;
+    }
+    /* Mobile cards */
+    .mobile-card {
+      display: none;
+      background: white;
+      border: 1px solid #ddd;
+      margin: 10px 0;
+      padding: 10px;
+    }
+    @media (max-width: 768px) {
+      table {
+        display: none;
+      }
+      .mobile-card {
+        display: block;
+      }
+    }
+  </style>
 </head>
 <body>
-  <header class="navbar">
-    <div class="logo">UrbanRide</div>
-    <nav>
-      <a href="/html/index.html">Home</a>          <a href="/html/booking.html" class="book-now">Book Now</a>
-    </nav>
-  </header>
+  <header>
+    <h1>UrbanRide - My Account</h1>
+  </header>
+  <main>
+    <div class="account-form">
+      <input type="text" id="phoneNumber" placeholder="+91 9876543210" />
+      <div id="recaptcha-container"></div>
+      <button id="sendOtpBtn">Send OTP</button>
+    </div>
 
-  <main class="account-section">
-    <h1>Your Account</h1>
-    <p>Enter your mobile number to access your bookings</p>
+    <div class="account-form" id="otpSection" style="display:none;">
+      <input type="text" id="otpInput" placeholder="Enter OTP" />
+      <button id="verifyOtpBtn">Verify OTP</button>
+    </div>
 
-    <form class="account-form">
-      <input
-        type="text"
-        placeholder="Enter your mobile number"
-        name="mobile"
-        required
-      />
-      <button type="submit" id="viewbtn">View Bookings</button>
-    </form>
+    <div id="bookingsTableContainer">
+      <table id="bookingsTable">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Guest</th>
+            <th>Phone</th>
+            <th>Email</th>
+            <th>Passengers</th>
+            <th>Pickup</th>
+            <th>Dropoff</th>
+            <th>Address</th>
+            <th>Trip Type</th>
+            <th>Date & Time</th>
+            <th>Vehicle Type</th>
+            <th>Driver</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
 
-    <div class="table-wrapper">
-      <table id="bookingsTable">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Guest</th>
-            <th>Phone</th>
-            <th>Email</th>
-            <th>Passengers</th>
-            <th>Pickup</th>
-            <th>Dropoff</th>
-            <th>Address</th>
-            <th>Trip Type</th>
-            <th>Date & Time</th>
-            <th>Vehicle Type</th>
-            <th>Driver</th>
-          </tr>
-        </thead>
-        <tbody id="tableBody"></tbody>
-      </table>
-    </div>
+    <div id="mobileCardsContainer"></div>
+  </main>
 
-    <div id="bookingsTableContainer" style="margin-top: 30px;"></div>
-    <div class="mobile-cards" id="mobileCardsContainer">
-          </div>
+  <script>
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "YOUR_FIREBASE_API_KEY",
+      authDomain: "YOUR_FIREBASE_PROJECT.firebaseapp.com",
+      projectId: "YOUR_FIREBASE_PROJECT_ID",
+      storageBucket: "YOUR_FIREBASE_PROJECT.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
 
-    <script>
-      // Define your Render backend URL here
-      const RENDER_BACKEND_URL = 'https://urbanride.onrender.com'; // IMPORTANT: Use your actual Render URL
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
 
-      document.getElementById('viewbtn').addEventListener('click', async (e) => { // Use id for clarity
-        e.preventDefault();
-        const phoneInput = document.querySelector('input[name="mobile"]'); // Target by name for robustness
-        const phone = phoneInput.value.trim();
+    let confirmationResultGlobal = null;
 
-        const tableContainer = document.getElementById('bookingsTableContainer');
-        const tableBody = document.getElementById('tableBody');
-        const mobileCardsContainer = document.getElementById('mobileCardsContainer');
+    document.getElementById('sendOtpBtn').addEventListener('click', () => {
+      const phoneNumber = document.getElementById('phoneNumber').value.trim();
+      if (!phoneNumber) {
+        alert("Please enter phone number with country code.");
+        return;
+      }
 
-        tableBody.innerHTML = ''; // Clear previous table rows
-        mobileCardsContainer.innerHTML = ''; // Clear previous cards
-        tableContainer.innerHTML = ''; // Clear messages from previous attempts
+      window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
+        size: 'invisible'
+      });
 
-        if (!phone) {
-          tableContainer.innerHTML = '<p style="color: red;">Please enter your mobile number.</p>';
-          return;
-        }
+      auth.signInWithPhoneNumber(phoneNumber, window.recaptchaVerifier)
+        .then((confirmationResult) => {
+          confirmationResultGlobal = confirmationResult;
+          document.getElementById('otpSection').style.display = 'flex';
+          alert('OTP sent successfully!');
+        })
+        .catch((error) => {
+          console.error(error);
+          alert('Error sending OTP: ' + error.message);
+        });
+    });
 
-        try {
-          // FIX: Use the RENDER_BACKEND_URL
-          const res = await fetch(`${RENDER_BACKEND_URL}/api/bookings/by-phone/${phone}`);
+    document.getElementById('verifyOtpBtn').addEventListener('click', () => {
+      const otp = document.getElementById('otpInput').value.trim();
+      if (!otp) {
+        alert("Please enter the OTP.");
+        return;
+      }
 
-          if (!res.ok) {
-            const errorText = await res.text(); // Read as text to see if it's HTML or another error
-            throw new Error(`HTTP error! Status: ${res.status}. Message: ${errorText}`);
-          }
+      confirmationResultGlobal.confirm(otp)
+        .then((result) => {
+          const phone = result.user.phoneNumber;
+          alert('OTP Verified Successfully!');
+          fetchBookings(phone);
+        })
+        .catch((error) => {
+          alert('Invalid OTP: ' + error.message);
+        });
+    });
 
-          const data = await res.json();
+    async function fetchBookings(phone) {
+      const RENDER_BACKEND_URL = 'https://urbanride.onrender.com';
+      const tableBody = document.getElementById('tableBody');
+      const mobileCardsContainer = document.getElementById('mobileCardsContainer');
+      const tableContainer = document.getElementById('bookingsTableContainer');
 
-          if (data.length === 0) {
-            tableContainer.innerHTML += '<p style="text-align:center; color: grey;">No bookings found for this number.</p>';
-            return;
-          }
+      tableBody.innerHTML = '';
+      mobileCardsContainer.innerHTML = '';
 
-          // Populate table (for desktop)
-          data.forEach(row => {
-            const tr = document.createElement('tr');
-            // Ensure all row.properties exist or default to '' to prevent 'undefined'
-            tr.innerHTML = `
-              <td>${row.id || ''}</td>
-              <td>${row.guest_name || ''}</td>
-              <td>${row.phone || ''}</td>
-              <td>${row.email || ''}</td>
-              <td>${row.passengers || ''}</td>
-              <td>${row.pickup || ''}</td>
-              <td>${row.dropoff || ''}</td>
-              <td>${row.address || ''}</td>
-              <td>${row.trip_type || ''}</td>
-              <td>${row.date_time ? new Date(row.date_time).toLocaleString() : ''}</td>
-              <td>${row.vehicle_type || ''}</td>
-              <td>${row.associated_member || ''}</td>
-            `;
-            tableBody.appendChild(tr);
-          });
+      try {
+        const res = await fetch(`${RENDER_BACKEND_URL}/api/bookings/by-phone/${phone}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
 
-          // Populate cards (for mobile)
-          data.forEach(row => {
-            const card = document.createElement('div');
-            card.className = 'mobile-card';
-            card.innerHTML = `
-              <p><strong>ID:</strong> ${row.id || ''}</p>
-              <p><strong>Guest:</strong> ${row.guest_name || ''}</p>
-              <p><strong>Phone:</strong> ${row.phone || ''}</p>
-              <p><strong>Email:</strong> ${row.email || ''}</p>
-              <p><strong>Passengers:</strong> ${row.passengers || ''}</p>
-              <p><strong>Pickup:</strong> ${row.pickup || ''}</p>
-              <p><strong>Dropoff:</strong> ${row.dropoff || ''}</p>
-              <p><strong>Address:</strong> ${row.address || ''}</p>
-              <p><strong>Trip Type:</strong> ${row.trip_type || ''}</p>
-              <p><strong>Date & Time:</strong> ${row.date_time ? new Date(row.date_time).toLocaleString() : ''}</p>
-              <p><strong>Vehicle Type:</strong> ${row.vehicle_type || ''}</p>
-              <p><strong>Driver:</strong> ${row.associated_member || ''}</p>
-            `;
-            mobileCardsContainer.appendChild(card);
-          });
+        if (data.length === 0) {
+          tableContainer.innerHTML = '<p style="text-align:center; color: grey;">No bookings found for this number.</p>';
+          return;
+        }
 
-        } catch (err) {
-          console.error('Error fetching bookings:', err);
-          tableContainer.innerHTML += `<p style="color: red;">Error fetching bookings: ${err.message || 'Network error'}.</p>`;
-        }
-      });
-    </script>
+        data.forEach(row => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${row.id || ''}</td>
+            <td>${row.guest_name || ''}</td>
+            <td>${row.phone || ''}</td>
+            <td>${row.email || ''}</td>
+            <td>${row.passengers || ''}</td>
+            <td>${row.pickup || ''}</td>
+            <td>${row.dropoff || ''}</td>
+            <td>${row.address || ''}</td>
+            <td>${row.trip_type || ''}</td>
+            <td>${row.date_time ? new Date(row.date_time).toLocaleString() : ''}</td>
+            <td>${row.vehicle_type || ''}</td>
+            <td>${row.associated_member || ''}</td>
+          `;
+          tableBody.appendChild(tr);
+        });
 
-    <footer class="urbanride-footer">
-      <div class="footer-container">
-        <div class="footer-column">
-          <h4>Company</h4>
-          <ul>
-            <li><a href="#">About us</a></li>
-            <li><a href="#">Our services</a></li>
-            <li><a href="#">Blog</a></li>
-            <li><a href="#">Careers</a></li>
-          </ul>
-        </div>
+        // Mobile cards
+        data.forEach(row => {
+          const card = document.createElement('div');
+          card.className = 'mobile-card';
+          card.innerHTML = `
+            <p><strong>ID:</strong> ${row.id || ''}</p>
+            <p><strong>Guest:</strong> ${row.guest_name || ''}</p>
+            <p><strong>Phone:</strong> ${row.phone || ''}</p>
+            <p><strong>Email:</strong> ${row.email || ''}</p>
+            <p><strong>Passengers:</strong> ${row.passengers || ''}</p>
+            <p><strong>Pickup:</strong> ${row.pickup || ''}</p>
+            <p><strong>Dropoff:</strong> ${row.dropoff || ''}</p>
+            <p><strong>Address:</strong> ${row.address || ''}</p>
+            <p><strong>Trip Type:</strong> ${row.trip_type || ''}</p>
+            <p><strong>Date & Time:</strong> ${row.date_time ? new Date(row.date_time).toLocaleString() : ''}</p>
+            <p><strong>Vehicle Type:</strong> ${row.vehicle_type || ''}</p>
+            <p><strong>Driver:</strong> ${row.associated_member || ''}</p>
+          `;
+          mobileCardsContainer.appendChild(card);
+        });
 
-        <div class="footer-column">
-          <h4>Products</h4>
-          <ul>
-            <li><a href="#">Ride</a></li>
-            <li><a href="#">Drive</a></li>
-            <li><a href="#">Urban Auto</a></li>
-            <li><a href="#">Urban Moto</a></li>
-          </ul>
-        </div>
-
-        <div class="footer-column">
-          <h4>Travel</h4>
-          <ul>
-            <li><a href="#">Airports</a></li>
-            <li><a href="#">Cities</a></li>
-          </ul>
-        </div>
-
-        <div class="footer-column">
-          <h4>Support</h4>
-          <ul>
-            <li><a href="#">Help Center</a></li>
-            <li><a href="#">Contact us</a></li>
-          </ul>
-        </div>
-      </div>
-
-      <div class="footer-bottom">
-        <p class="copyright">©2025 UrbanRide technologies Inc.</p>
-        <span class="footer-brand">UrbanRide</span>
-      </div>
-    </footer>
-  </main>
+      } catch (err) {
+        tableContainer.innerHTML = `<p style="color: red;">Error fetching bookings: ${err.message}</p>`;
+      }
+    }
+  </script>
 </body>
 </html>
+
