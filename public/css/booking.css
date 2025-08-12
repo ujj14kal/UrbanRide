@@ -1,3 +1,6 @@
+/* ==============================
+   RESET & GLOBAL STYLES
+============================== */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -6,27 +9,35 @@
 
 body {
   font-family: Arial, sans-serif;
-  background-color: white;
+  background-color: #ffffff;
   color: #333;
-  padding: 0;
+  line-height: 1.6;
 }
 
+/* ==============================
+   HEADER / NAVBAR
+============================== */
 header {
-  background-color: black;
+  background-color: #000;
   color: white;
-  padding: 20px;
-  text-align: center;
-  font-size: 24px;
-  font-weight: 550;
+  padding: 15px 20px;
+  font-size: 20px;
+  font-weight: 600;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
+/* ==============================
+   FORM CONTAINER
+============================== */
 .form-container {
   max-width: 900px;
   margin: 40px auto;
   padding: 30px;
   background-color: #f9f9f9;
   border-radius: 10px;
-  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
 }
 
 h2 {
@@ -35,6 +46,7 @@ h2 {
   color: #000;
 }
 
+/* Form Rows */
 .form-row {
   display: flex;
   flex-wrap: wrap;
@@ -42,6 +54,7 @@ h2 {
   margin-bottom: 20px;
 }
 
+/* Form Groups */
 .form-group {
   flex: 1;
   min-width: 260px;
@@ -49,15 +62,13 @@ h2 {
   flex-direction: column;
 }
 
-.full-width {
-  width: 100%;
-}
-
 label {
   font-weight: 600;
-  margin-bottom: 5px;
+  margin-bottom: 6px;
+  color: #222;
 }
 
+/* Inputs & Selects */
 input,
 select,
 textarea {
@@ -66,60 +77,60 @@ textarea {
   border: 1px solid #ccc;
   border-radius: 6px;
   background-color: #fff;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
-textarea {
-  resize: vertical;
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: #000;
+  outline: none;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
 }
 
+/* Radio Buttons */
 .radio-group {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   margin-top: 6px;
 }
 
+/* ==============================
+   SUBMIT BUTTON
+============================== */
 .submit-btn {
   width: 100%;
   padding: 14px;
-  background-color: black;
+  background-color: #000;
   color: white;
   font-size: 18px;
   border: none;
   border-radius: 6px;
   cursor: pointer;
-  transition: background 0.3s ease;
+  transition: background 0.3s ease, transform 0.1s ease;
 }
 
 .submit-btn:hover {
   background-color: #333;
+  transform: scale(1.02);
 }
 
-/* Responsive: Stack on mobile */
-@media (max-width: 768px) {
-  .form-row {
-    flex-direction: column;
-  }
-}
-
-.submit-btn {
-  width: 100%;
-  padding: 14px;
-  background-color: black;
-  color: white;
-  font-size: 18px;
-  border: none;
+/* ==============================
+   TRIP INFO BOX
+============================== */
+#tripInfo {
+  margin-top: 20px;
+  padding: 12px;
   border-radius: 6px;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-  margin-top: 10px;
+  background-color: #eef1f4;
+  color: #333;
+  font-size: 15px;
 }
 
-.submit-btn:hover {
-  background-color: #333;
-}
-
-
+/* ==============================
+   POPUP MESSAGE
+============================== */
 .popup-message {
   display: none;
   position: fixed;
@@ -148,46 +159,52 @@ textarea {
   border: 1px solid #f5c6cb;
 }
 
-.table-wrapper {
-  width: 100%;
-  overflow-x: auto;
-  margin-top: 24px;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-}
-
-#bookingsTable {
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 1000px;
-  font-size: 15px;
-}
-
-#bookingsTable thead {
+/* ==============================
+   FOOTER
+============================== */
+.urbanride-footer {
   background-color: #000;
-  color: #fff;
+  color: white;
+  padding: 30px 20px;
+  margin-top: 50px;
 }
 
-#bookingsTable th, 
-#bookingsTable td {
-  padding: 10px 12px;
-  border: 1px solid #ddd;
-  text-align: left;
-  white-space: nowrap;
+.urbanride-footer .footer-content {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 20px;
 }
 
-#bookingsTable tbody tr:nth-child(even) {
-  background-color: #f9f9f9;
+.urbanride-footer a {
+  color: #ccc;
+  text-decoration: none;
 }
 
-@media screen and (max-width: 768px) {
-  #bookingsTable {
-    font-size: 13px;
-    min-width: unset;
+.urbanride-footer a:hover {
+  color: white;
+  text-decoration: underline;
+}
+
+.urbanride-footer .footer-bottom {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 14px;
+  color: #aaa;
+}
+
+/* ==============================
+   RESPONSIVE
+============================== */
+@media (max-width: 768px) {
+  .form-row {
+    flex-direction: column;
   }
-
-  .table-wrapper {
-    overflow-x: scroll;
+  
+  .urbanride-footer .footer-content {
+    flex-direction: column;
+    text-align: center;
   }
 }
+
 
