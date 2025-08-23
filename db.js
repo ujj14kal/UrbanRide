@@ -8,10 +8,7 @@ const connection = mysql.createConnection({
   password: process.env.MYSQLPASSWORD,
   database: process.env.MYSQLDATABASE,
   port: process.env.MYSQLPORT,
-  ssl: {
-    
-    rejectUnauthorized: false // Ensure the server certificate is verified
-  }
+  ssl: { ca: fs.readFileSync("ca.pem") }
 });
 
 connection.connect((err) => {

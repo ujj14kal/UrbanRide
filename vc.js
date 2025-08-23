@@ -38,7 +38,7 @@ const pool = mysql.createPool({
     database: MYSQL_DATABASE,
     port: MYSQLPORT,
    ssl: {
-        rejectUnauthorized: false  // 👈 Aiven requires SSL/TLS
+        ca: fs.readFileSync("ca.pem")   
     },
     waitForConnections: true,
     connectionLimit: 10,
