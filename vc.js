@@ -17,6 +17,7 @@ const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 const MYSQL_HOST = process.env.MYSQLHOST;
 const MYSQL_USER = process.env.MYSQLUSER;
+const MYSQLPORT = process.env.MYSQLPORT;
 const MYSQL_PASSWORD = process.env.MYSQLPASSWORD;
 const MYSQL_DATABASE = process.env.MYSQLDATABASE;
 
