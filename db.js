@@ -18,7 +18,7 @@ connection.connect((err) => {
     console.error('❌ MySQL connection error:', err);
     return;
   }
-  console.log('✅ Connected to Railway MySQL database!');
+  console.log('✅ Connected to Aiven MySQL database!');
 });
 
 // Export promise-based wrapper so `await db.execute(...)` works
