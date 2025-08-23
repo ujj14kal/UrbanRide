@@ -36,6 +36,10 @@ const pool = mysql.createPool({
     user: MYSQL_USER,
     password: MYSQL_PASSWORD,
     database: MYSQL_DATABASE,
+    port: MYSQLPORT,
+   ssl: {
+        rejectUnauthorized: false  // 👈 Aiven requires SSL/TLS
+    },
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0
