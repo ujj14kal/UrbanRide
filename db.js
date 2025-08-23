@@ -9,8 +9,8 @@ const connection = mysql.createConnection({
   database: process.env.MYSQLDATABASE,
   port: process.env.MYSQLPORT,
   ssl: {
-    ca: process.env.MYSQL_CA_CERT,
-    rejectUnauthorized: true // Ensure the server certificate is verified
+    
+    rejectUnauthorized: false // Ensure the server certificate is verified
   }
 });
 
