@@ -1,5 +1,4 @@
 require('dotenv').config(); // ✅ Load environment variables from .env
-const fs = require("fs");
 
 
 const amqp = require('amqplib');
@@ -39,7 +38,7 @@ const pool = mysql.createPool({
     database: MYSQL_DATABASE,
     port: MYSQLPORT,
    ssl: {
-        ca: fs.readFileSync("ca.pem")   
+        rejectUnauthorized: false  // 👈 Aiven requires SSL/TLS
     },
     waitForConnections: true,
     connectionLimit: 10,
