@@ -1,5 +1,7 @@
 // db.js
 const mysql = require('mysql2');
+const fs = require("fs");
+
 require('dotenv').config();
 
 const connection = mysql.createConnection({

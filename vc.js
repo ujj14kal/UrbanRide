@@ -1,4 +1,5 @@
 require('dotenv').config(); // ✅ Load environment variables from .env
+const fs = require("fs");
 
 
 const amqp = require('amqplib');
