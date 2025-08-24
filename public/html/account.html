@@ -241,6 +241,31 @@
         tableContainer.innerHTML += `<p style="color: red;">Error fetching bookings: ${err.message}.</p>`;
       }
     }
+
+
+    async function handleCancelBooking(bookingId) {
+      if (confirm("Are you sure you want to cancel the ride?")) {
+        try {
+          const res = await fetch(`${RENDER_BACKEND_URL}/api/bookings/${bookingId}`, {
+            method: 'DELETE'
+          });
+          
+          if (res.ok) {
+            alert("Booking cancelled successfully!");
+            // Re-fetch the bookings to update the list
+            const phone = document.querySelector('input[name="mobile"]').value.trim();
+            fetchBookings(phone);
+          } else {
+            const errorText = await res.text();
+            console.error("Failed to cancel booking:", errorText);
+            alert("Failed to cancel booking: " + errorText);
+          }
+        } catch (error) {
+          console.error('Network error cancelling booking:', error);
+          alert("A network error occurred while trying to cancel the booking.");
+        }
+      }
+    }
   </script>
 </body>
 </html>
