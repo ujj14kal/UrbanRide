@@ -5,6 +5,9 @@ const bodyParser = require('body-parser');
 const path = require('path');
 const axios = require('axios');
 
+const startVC = require('./vc'); // assuming vc.js exports a function to start the listener
+
+
 // ✅ Import database connection
 const db = require('./db'); // adjust if needed
 const bookingRoutes = require('./booking'); // Assuming this handles other booking operations
@@ -123,4 +126,7 @@ app.post('/telegram-update', async (req, res) => {
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`UrbanRide backend is live on port ${PORT}`);
+
+    require('./vc'); 
+    console.log('✅ vc.js has been started successfully');
 });
