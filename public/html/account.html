@@ -234,18 +234,9 @@
             <p><strong>Driver:</strong> ${row.associated_member || ''}</p>
           `;
 
-           <div class="card-buttons">
-        <button class="cancel-btn" data-id="${row.id}">Cancel Ride</button>
-    </div>
+        
           mobileCardsContainer.appendChild(card);
         });
-
-        document.querySelectorAll('.cancel-btn').forEach(button => {
-  button.addEventListener('click', (event) => {
-    const rideId = event.target.dataset.id;
-    handleCancelBooking(rideId);
-  });
-});
 
       } catch (err) {
         console.error('Error fetching bookings:', err);
