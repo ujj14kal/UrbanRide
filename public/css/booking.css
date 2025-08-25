@@ -6,6 +6,10 @@
   margin: 0;
   padding: 0;
 }
+html, body {
+  margin: 0;
+  padding: 0;
+}
 
 body {
   font-family: Arial, sans-serif;
@@ -55,13 +59,13 @@ header nav a {
 }
 
 header nav a:hover {
-  color: #ffb400; /* accent hover */
-  border-bottom: 2px solid #ffb400;
+  color: white; /* accent hover */
+  border-bottom: 2px solid white;
 }
 
 header nav a.active {
-  color: #ffb400;
-  border-bottom: 2px solid #ffb400;
+  color: white;
+  border-bottom: 2px solid white;
 }
 
 
