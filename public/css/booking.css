@@ -17,16 +17,53 @@ body {
 /* ==============================
    HEADER / NAVBAR
 ============================== */
+/* NAVBAR */
 header {
-  background-color: #000;
+  background-color: #000; /* solid black */
   color: white;
-  padding: 15px 20px;
+  padding: 15px 40px; 
   font-size: 20px;
   font-weight: 600;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3); /* subtle shadow */
+  position: sticky;
+  top: 0;
+  z-index: 1000;
 }
+
+header .logo {
+  font-size: 24px;
+  font-weight: 700;
+  color: #ffb400; /* accent color for branding */
+  letter-spacing: 1px;
+}
+
+header nav {
+  display: flex;
+  gap: 25px;
+}
+
+header nav a {
+  color: white;
+  text-decoration: none;
+  font-size: 16px;
+  font-weight: 500;
+  transition: color 0.3s ease, border-bottom 0.3s ease;
+  padding: 5px 0;
+}
+
+header nav a:hover {
+  color: #ffb400; /* accent hover */
+  border-bottom: 2px solid #ffb400;
+}
+
+header nav a.active {
+  color: #ffb400;
+  border-bottom: 2px solid #ffb400;
+}
+
 
 /* ==============================
    FORM CONTAINER
