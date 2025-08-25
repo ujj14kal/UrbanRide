@@ -60,11 +60,7 @@ header nav a {
   padding: 5px 0;
 }
 
-header nav a:hover,
-header nav a.active {
-  color: white;
-  border-bottom: 2px solid white;
-}
+
 
 /* ==============================
    FORM CONTAINER
