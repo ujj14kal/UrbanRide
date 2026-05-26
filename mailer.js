@@ -1,62 +1,27 @@
 // mailer.js — Invoice email sent to rider when driver ends the ride
 //
-// Uses nodemailer with Gmail SMTP (free).
-// Required env vars on Render:
-//   EMAIL_USER  — your Gmail address, e.g. noreply@yourdomain.com
-//   EMAIL_PASS  — Gmail App Password (not your real password)
-//                 Generate at: myaccount.google.com → Security → App passwords
+// Uses Brevo (formerly Sendinblue) Transactional Email HTTP API — free 300/day.
+// No SMTP ports used so it works on Render's free tier without any port issues.
 //
-// If neither var is set the function logs a warning and returns silently —
-// the ride still ends, email is just skipped (safe for local dev without creds).
+// Required env vars on Render:
+//   BREVO_API_KEY — from brevo.com → SMTP & API → API Keys
+//   EMAIL_USER    — verified sender address on Brevo (urbanride.invoice@gmail.com)
+//
+// Setup (one-time, ~2 min):
+//   1. Sign up free at brevo.com
+//   2. Senders & IP → Senders → add + verify urbanride.invoice@gmail.com
+//   3. SMTP & API → API Keys → create key → copy it
+//   4. Add BREVO_API_KEY to Render environment variables
 
-const nodemailer  = require('nodemailer');
+const axios       = require('axios');
 const PDFDocument = require('pdfkit');
 const path        = require('path');
 const logger      = require('./logger');
 
-// ── Transporter (created once, reused) ───────────────────────────────────────
-// Gmail SMTP requires an App Password, NOT your regular login password.
-// Steps to generate one (free):
-//   1. Go to myaccount.google.com → Security
-//   2. Enable 2-Step Verification (if not already on)
-//   3. Search "App passwords" in the search bar
-//   4. Create one → name it "UrbanRide" → copy the 16-char code
-//   5. Set EMAIL_PASS to that code (no spaces) in your .env / Render env vars
-// Build and verify the transporter once; returns a Promise<transporter|null>
-let _transporterPromise = null;
-function makeTransporter() {
-  if (_transporterPromise) return _transporterPromise;
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    logger.warn({ event: 'email_not_configured', reason: 'EMAIL_USER or EMAIL_PASS missing' });
-    return Promise.resolve(null);
-  }
-  _transporterPromise = new Promise((resolve) => {
-    const t = nodemailer.createTransport({
-      host:   'smtp.gmail.com',
-      port:   587,
-      secure: false,          // STARTTLS on port 587 (more firewall-friendly than SSL 465)
-      auth:   { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
-      connectionTimeout: 10000,
-      greetingTimeout:   10000,
-      socketTimeout:     15000
-    });
-    t.verify((err) => {
-      if (err) {
-        logger.error({
-          event: 'email_smtp_verify_failed',
-          message: err.message,
-          hint: 'EMAIL_PASS must be a Gmail App Password (16 chars). ' +
-                'Generate at: myaccount.google.com → Security → App passwords'
-        });
-        _transporterPromise = null;   // allow retry on next request
-        resolve(null);
-      } else {
-        logger.info({ event: 'email_smtp_ready', user: process.env.EMAIL_USER });
-        resolve(t);
-      }
-    });
-  });
-  return _transporterPromise;
+const BREVO_SEND_URL = 'https://api.brevo.com/v3/smtp/email';
+
+function getBrevoKey() {
+  return process.env.BREVO_API_KEY || null;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -492,31 +457,37 @@ function buildHtml(booking) {
 
 // ── Main export ───────────────────────────────────────────────────────────────
 async function sendRideCompleteEmail(booking) {
-  // If rider didn't provide an email, send invoice to the ops mailbox instead
   const recipient = booking.email || process.env.EMAIL_USER;
   if (!recipient) {
     logger.info({ event: 'email_skipped', reason: 'no recipient', rideId: booking.id });
     return;
   }
 
-  const transporter = await makeTransporter();
-  if (!transporter) {
-    logger.warn({ event: 'email_skipped', reason: 'transporter not ready', rideId: booking.id });
+  const apiKey = getBrevoKey();
+  if (!apiKey) {
+    logger.warn({ event: 'email_skipped', reason: 'BREVO_API_KEY not set', rideId: booking.id });
     return;
   }
 
-  const pdfBuffer = await buildInvoiceBuffer(booking);
+  const senderEmail = process.env.EMAIL_USER || 'urbanride.invoice@gmail.com';
+  const pdfBuffer   = await buildInvoiceBuffer(booking);
+  const ref         = bookingRef(booking.id);
 
-  await transporter.sendMail({
-    from:    `"UrbanRide" <${process.env.EMAIL_USER}>`,
-    to:      recipient,
-    subject: `Your UrbanRide receipt — ${bookingRef(booking.id)}`,
-    html:    buildHtml(booking),
-    attachments: [{
-      filename:    `UrbanRide_Invoice_${bookingRef(booking.id)}.pdf`,
-      content:     pdfBuffer,
-      contentType: 'application/pdf'
+  await axios.post(BREVO_SEND_URL, {
+    sender:      { name: 'UrbanRide', email: senderEmail },
+    to:          [{ email: recipient, name: booking.guest_name || 'Rider' }],
+    subject:     `Your UrbanRide receipt — ${ref}`,
+    htmlContent: buildHtml(booking),
+    attachment:  [{
+      name:    `UrbanRide_Invoice_${ref}.pdf`,
+      content: pdfBuffer.toString('base64')
     }]
+  }, {
+    headers: {
+      'api-key':      apiKey,
+      'content-type': 'application/json',
+      'accept':       'application/json'
+    }
   });
 
   logger.info({ event: 'invoice_email_sent', rideId: booking.id, to: recipient });
