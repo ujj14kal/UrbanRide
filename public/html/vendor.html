@@ -131,12 +131,13 @@
        SCRIPTS
   ════════════════════════════════════════════ -->
   <script>
-    const BACKEND = 'https://urbanride.onrender.com';
+    const BACKEND = window.location.origin;   // works for both localhost and Render
     let token          = '';
     let socket         = null;
     let pollTimer      = null;
     let socketLive     = false;
     let activeRideId   = null;   // tracks the currently in-progress ride
+    let activeRide     = null;   // full ride object for completed card data
 
     // ── Stats ─────────────────────────────────────────────
     const stats = { pending: 0, accepted: 0, rejected: 0, total: 0 };
@@ -163,6 +164,7 @@
     // ── Active ride banner ────────────────────────────────
     function showActiveBanner(r) {
       activeRideId = r.id;
+      activeRide   = r;
       document.getElementById('arbInfo').textContent =
         `Ride #${r.id} · ${r.guest_name} · ${r.pickup} → ${r.dropoff} · ${r.vehicle_type}`;
       document.getElementById('activeRideBar').style.display = 'flex';
@@ -172,6 +174,7 @@
 
     function clearActiveBanner() {
       activeRideId = null;
+      activeRide   = null;
       document.getElementById('activeRideBar').style.display = 'none';
       document.getElementById('endRideBtn').dataset.id = '';
       enableAcceptButtons();
@@ -207,13 +210,14 @@
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
+        const ended = activeRide || { id: rideId, guest_name: `Ride #${rideId}`, pickup: '', dropoff: '' };
         clearActiveBanner();
         stats.accepted = Math.max(0, stats.accepted - 1);
         updateStats();
         showToast(`✅ Ride #${rideId} ended — invoice emailed to rider`);
 
-        // Add to recent column
-        prependActionedCard({ id: rideId, guest_name: `Ride #${rideId}`, pickup: '', dropoff: '' }, 'completed');
+        // Add to recent column with real ride data
+        prependActionedCard(ended, 'completed');
 
       } catch (err) {
         showToast(`Error ending ride: ${err.message}`);

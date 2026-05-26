@@ -243,6 +243,7 @@ nav a:hover { opacity: 1; }
   margin-bottom: 1.5rem;
   filter: grayscale(1);
   opacity: .75;
+  mix-blend-mode: multiply;   /* dissolves white image backgrounds on light section */
 }
 
 .testimonial p {

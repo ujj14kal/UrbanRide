@@ -110,7 +110,7 @@
 
   <!-- ── App script ──────────────────────────────────────── -->
   <script>
-    const BACKEND       = 'https://urbanride.onrender.com';
+    const BACKEND       = window.location.origin;
     const bookingId     = new URLSearchParams(window.location.search).get('booking_id');
     const statusBadge   = document.getElementById('vendor-status-badge');
     const acceptSound   = document.getElementById('accept-sound');
