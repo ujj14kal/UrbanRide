@@ -236,14 +236,76 @@ nav a:hover { opacity: 1; }
 
 .testimonial.active { display: flex; }
 
-.testimonial img {
-  width: 52px;
-  height: 52px;
-  object-fit: contain;
-  margin-bottom: 1.5rem;
-  filter: grayscale(1);
-  opacity: .75;
-  mix-blend-mode: multiply;   /* dissolves white image backgrounds on light section */
+/* ── Brand wordmarks (no images, no backgrounds) ──────── */
+.brand-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 1.75rem;
+  line-height: 1;
+  user-select: none;
+}
+
+/* Google */
+.google-word {
+  font-size: 1.65rem;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+
+/* Amazon */
+.brand-amazon {
+  flex-direction: column;
+  gap: 2px;
+}
+.amazon-text {
+  font-size: 1.65rem;
+  font-weight: 800;
+  color: #232F3E;
+  letter-spacing: -1px;
+}
+.amazon-smile {
+  width: 72px;
+  height: 12px;
+  display: block;
+  margin: 0 auto;
+}
+
+/* Microsoft */
+.ms-flag {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+}
+.ms-name {
+  font-size: 1.4rem;
+  font-weight: 300;
+  color: #444;
+  letter-spacing: -0.2px;
+}
+
+/* Deloitte */
+.brand-deloitte {
+  font-size: 1.65rem;
+  font-weight: 700;
+  color: #86BC25;
+  letter-spacing: -0.3px;
+  font-style: italic;
+}
+
+/* MobiKwik */
+.mk-mobi {
+  font-size: 1.65rem;
+  font-weight: 800;
+  color: #1B3D94;
+  letter-spacing: -0.5px;
+}
+.mk-kwik {
+  font-size: 1.65rem;
+  font-weight: 800;
+  color: #00B0F0;
+  letter-spacing: -0.5px;
 }
 
 .testimonial p {
@@ -255,7 +317,7 @@ nav a:hover { opacity: 1; }
   max-width: 700px;
 }
 
-.testimonial span {
+.testimonial > span {        /* only the "— Company" attribution line */
   font-size: .875rem;
   font-weight: 600;
   color: var(--gray-400);
