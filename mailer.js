@@ -330,9 +330,10 @@ function buildHtml(booking) {
             <td style="vertical-align:middle">
               <table cellpadding="0" cellspacing="0" border="0">
                 <tr>
-                  <td width="40" height="40" align="center" valign="middle"
-                      style="background:#16a34a;border-radius:9px;font-size:20px;font-weight:900;color:#ffffff">
-                    U
+                  <td width="44" style="vertical-align:middle">
+                    <img src="https://urbanride.onrender.com/images/logo.png"
+                         alt="UrbanRide" width="44" height="44"
+                         style="display:block;border-radius:8px" />
                   </td>
                   <td style="padding-left:10px;vertical-align:middle">
                     <div style="font-size:18px;font-weight:700;color:#ffffff">UrbanRide</div>
