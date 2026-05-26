@@ -565,6 +565,9 @@
       if (socket) socket.disconnect();
       clearInterval(pollInterval); pollInterval = null;
       await auth.signOut();
+      // Clear the booking-page OTP gate skip too
+      localStorage.removeItem('ur_phone');
+      localStorage.removeItem('ur_uid');
       dashSection.style.display = 'none';
       authSection.style.display = 'flex';
       phoneForm.style.display   = 'block';
@@ -576,6 +579,20 @@
       currentPhone = ''; activeRideId = null;
       // Reset history
       historyList.innerHTML = '<div class="panel-empty" id="histEmpty">No past rides yet.</div>';
+    });
+
+    // ── Auto-login if Firebase session already exists ─────
+    // Fires immediately on page load — if the user verified OTP
+    // in a previous visit, Firebase restores the session from
+    // IndexedDB and this callback receives the user object.
+    auth.onAuthStateChanged((user) => {
+      if (user && user.phoneNumber && !currentPhone) {
+        currentPhone = user.phoneNumber;
+        // Keep localStorage in sync so booking page gate is also skipped
+        localStorage.setItem('ur_phone', currentPhone);
+        localStorage.setItem('ur_uid',   user.uid);
+        showDashboard(currentPhone);
+      }
     });
 
     // ════════════════════════════════════════════════════
