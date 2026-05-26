@@ -280,6 +280,33 @@ app.post('/api/vendor/end-ride/:id', vendorAuth, async (req, res) => {
   }
 });
 
+// ── Test email (vendor-auth protected) ───────────────────────────────────────
+// GET /test-email?to=you@example.com
+// Sends a dummy invoice so you can confirm SMTP works without ending a ride.
+app.get('/test-email', vendorAuth, async (req, res) => {
+  const to = req.query.to || process.env.EMAIL_USER;
+  try {
+    await sendRideCompleteEmail({
+      id: 0,
+      guest_name:       'Test Rider',
+      phone:            '+91 00000 00000',
+      email:            to,
+      pickup:           'Connaught Place, New Delhi',
+      dropoff:          'Indira Gandhi International Airport',
+      vehicle_type:     'Sedan',
+      passengers:       1,
+      trip_type:        'Local',
+      associated_member:'Test Driver',
+      date_time:        new Date().toISOString(),
+      status:           'completed'
+    });
+    res.json({ success: true, message: `Test invoice sent to ${to}` });
+  } catch (err) {
+    logger.error({ event: 'test_email_error', message: err.message });
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // ── Booking CRUD ──────────────────────────────────────────────────────────────
 app.use('/api/bookings', bookingLimiter, bookingRoutes);
 

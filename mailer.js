@@ -22,32 +22,36 @@ const logger      = require('./logger');
 //   3. Search "App passwords" in the search bar
 //   4. Create one → name it "UrbanRide" → copy the 16-char code
 //   5. Set EMAIL_PASS to that code (no spaces) in your .env / Render env vars
-let _transporter = null;
+// Build and verify the transporter once; returns a Promise<transporter|null>
+let _transporterPromise = null;
 function makeTransporter() {
-  if (_transporter) return _transporter;
+  if (_transporterPromise) return _transporterPromise;
   if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
     logger.warn({ event: 'email_not_configured', reason: 'EMAIL_USER or EMAIL_PASS missing' });
-    return null;
+    return Promise.resolve(null);
   }
-  _transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
+  _transporterPromise = new Promise((resolve) => {
+    const t = nodemailer.createTransport({
+      service: 'gmail',
+      auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
+    });
+    t.verify((err) => {
+      if (err) {
+        logger.error({
+          event: 'email_smtp_verify_failed',
+          message: err.message,
+          hint: 'EMAIL_PASS must be a Gmail App Password (16 chars). ' +
+                'Generate at: myaccount.google.com → Security → App passwords'
+        });
+        _transporterPromise = null;   // allow retry on next request
+        resolve(null);
+      } else {
+        logger.info({ event: 'email_smtp_ready', user: process.env.EMAIL_USER });
+        resolve(t);
+      }
+    });
   });
-  // Verify SMTP connection at startup so misconfiguration appears in logs immediately
-  _transporter.verify((err) => {
-    if (err) {
-      logger.error({
-        event: 'email_smtp_verify_failed',
-        message: err.message,
-        hint: 'Make sure EMAIL_PASS is a Gmail App Password, not your login password. ' +
-              'Generate at: myaccount.google.com → Security → App passwords'
-      });
-      _transporter = null;   // reset so next call retries
-    } else {
-      logger.info({ event: 'email_smtp_ready', user: process.env.EMAIL_USER });
-    }
-  });
-  return _transporter;
+  return _transporterPromise;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -483,14 +487,16 @@ function buildHtml(booking) {
 
 // ── Main export ───────────────────────────────────────────────────────────────
 async function sendRideCompleteEmail(booking) {
-  if (!booking.email) {
-    logger.info({ event: 'email_skipped', reason: 'no email on booking', rideId: booking.id });
+  // If rider didn't provide an email, send invoice to the ops mailbox instead
+  const recipient = booking.email || process.env.EMAIL_USER;
+  if (!recipient) {
+    logger.info({ event: 'email_skipped', reason: 'no recipient', rideId: booking.id });
     return;
   }
 
-  const transporter = makeTransporter();
+  const transporter = await makeTransporter();
   if (!transporter) {
-    logger.warn({ event: 'email_skipped', reason: 'EMAIL_USER/EMAIL_PASS not set', rideId: booking.id });
+    logger.warn({ event: 'email_skipped', reason: 'transporter not ready', rideId: booking.id });
     return;
   }
 
@@ -498,7 +504,7 @@ async function sendRideCompleteEmail(booking) {
 
   await transporter.sendMail({
     from:    `"UrbanRide" <${process.env.EMAIL_USER}>`,
-    to:      booking.email,
+    to:      recipient,
     subject: `Your UrbanRide receipt — ${bookingRef(booking.id)}`,
     html:    buildHtml(booking),
     attachments: [{
@@ -508,7 +514,7 @@ async function sendRideCompleteEmail(booking) {
     }]
   });
 
-  logger.info({ event: 'invoice_email_sent', rideId: booking.id, to: booking.email });
+  logger.info({ event: 'invoice_email_sent', rideId: booking.id, to: recipient });
 }
 
 module.exports = { sendRideCompleteEmail };
