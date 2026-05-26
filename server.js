@@ -50,6 +50,21 @@ const bookingLimiter = rateLimit({
   message: { error: 'Too many booking attempts, please slow down.' }
 });
 
+// ── Vendor auth ───────────────────────────────────────────────────
+// Simple token auth for the vendor console. Set VENDOR_PASSWORD in .env.
+const VENDOR_TOKEN = process.env.VENDOR_PASSWORD || 'urbanride_vendor';
+
+function vendorAuth(req, res, next) {
+  const token =
+    req.headers['x-vendor-token'] ||
+    req.body?.token ||
+    req.query.token;
+  if (token !== VENDOR_TOKEN) {
+    return res.status(401).json({ error: 'Unauthorized — invalid vendor token' });
+  }
+  next();
+}
+
 // ── Core middleware ────────────────────────────────────────────────────────────
 app.use(cors());
 app.use(bodyParser.json());
@@ -129,6 +144,49 @@ app.post('/directions', async (req, res) => {
   }
 });
 
+// ── Vendor Console API ────────────────────────────────────────────────────────
+// GET /api/vendor/rides — pending + recent completed rides
+app.get('/api/vendor/rides', vendorAuth, async (req, res) => {
+  try {
+    const [pending] = await db.query(
+      "SELECT * FROM rides WHERE status IN ('pending','open_market') ORDER BY id DESC"
+    );
+    const [recent] = await db.query(
+      "SELECT * FROM rides WHERE status IN ('accepted','rejected') ORDER BY id DESC LIMIT 30"
+    );
+    res.json({ pending, recent });
+  } catch (err) {
+    console.error('Vendor rides error:', err.message);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// POST /api/vendor/respond/:id — accept / reject / open market
+app.post('/api/vendor/respond/:id', vendorAuth, async (req, res) => {
+  const { action } = req.body;
+  const { id }     = req.params;
+
+  const statusMap = { accept: 'accepted', reject: 'rejected', open_market: 'open_market' };
+  const newStatus = statusMap[action];
+  if (!newStatus) return res.status(400).json({ error: 'Invalid action' });
+
+  try {
+    await db.query('UPDATE rides SET status = ? WHERE id = ?', [newStatus, id]);
+    statusCache.del(`status_${id}`);
+    bookingCache.del(`booking_${id}`);
+
+    // Push to rider's confirmation page
+    io.to(`booking_${id}`).emit('status_update', { bookingId: id, status: newStatus });
+    // Keep all vendor sessions in sync
+    io.to('vendor_room').emit('ride_actioned', { id, status: newStatus });
+
+    res.json({ success: true, status: newStatus });
+  } catch (err) {
+    console.error('Vendor respond error:', err.message);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // ── Booking CRUD ──────────────────────────────────────────────────────────────
 app.use('/api/bookings', bookingLimiter, bookingRoutes);
 
@@ -184,10 +242,21 @@ app.post('/telegram-update', async (req, res) => {
 io.on('connection', (socket) => {
   console.log(`🔌 Socket connected: ${socket.id}`);
 
-  // Client joins a room keyed to their booking ID so we can target pushes
+  // Rider: joins room for their specific booking (real-time status push)
   socket.on('join_booking', (bookingId) => {
     socket.join(`booking_${bookingId}`);
     console.log(`📌 ${socket.id} watching booking ${bookingId}`);
+  });
+
+  // Vendor: joins vendor_room if password matches
+  socket.on('join_vendor', (token) => {
+    if (token === VENDOR_TOKEN) {
+      socket.join('vendor_room');
+      socket.emit('vendor_auth', { ok: true });
+      console.log(`🏪 Vendor socket ${socket.id} authenticated`);
+    } else {
+      socket.emit('vendor_auth', { ok: false });
+    }
   });
 
   socket.on('disconnect', () => {

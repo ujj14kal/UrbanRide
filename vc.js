@@ -146,6 +146,12 @@ async function receiveMessages() {
       try {
         await sendToTelegram(booking);
         console.log(`📨 Booking ${booking.id} sent to Telegram`);
+
+        // Push to vendor web console in real time
+        try {
+          socketModule.getIO().to('vendor_room').emit('new_ride', booking);
+        } catch (_) { /* non-fatal — console may not be open */ }
+
         channel.ack(msg);
       } catch (err) {
         console.error('❌ Telegram send failed:', err?.response?.data || err.message);

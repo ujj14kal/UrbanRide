@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Vendor Console — UrbanRide</title>
+  <link rel="stylesheet" href="/css/vendor.css">
+  <link rel="icon" type="image/png" href="/images/ur.png">
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js" crossorigin="anonymous"></script>
+</head>
+
+<body>
+
+  <!-- ════════════════════════════════════════════
+       LOGIN SCREEN
+  ════════════════════════════════════════════ -->
+  <div id="loginScreen">
+    <div class="login-card">
+      <div class="login-logo">🚖 UrbanRide</div>
+      <div class="login-sub">Vendor Console</div>
+
+      <input type="password" id="passwordInput" placeholder="Enter vendor password" />
+      <p class="login-error" id="loginError">Incorrect password — try again.</p>
+      <button class="login-btn" id="loginBtn">Access Dashboard →</button>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════
+       DASHBOARD
+  ════════════════════════════════════════════ -->
+  <div id="dashboard">
+
+    <!-- Header -->
+    <header class="dash-header">
+      <div style="display:flex;align-items:center;gap:.5rem">
+        <span class="dash-logo">UrbanRide</span>
+        <span class="dash-badge">Vendor Console</span>
+      </div>
+      <div class="header-right">
+        <div class="rt-indicator">
+          <span class="rt-dot" id="rtDot"></span>
+          <span id="rtLabel">Connecting…</span>
+        </div>
+        <button class="logout-btn" id="logoutBtn">Logout</button>
+      </div>
+    </header>
+
+    <!-- Stats bar -->
+    <div class="stats-bar">
+      <div class="stat-cell">
+        <div class="stat-icon pending">⏳</div>
+        <div class="stat-info">
+          <span class="stat-n" id="cnt-pending">0</span>
+          <span class="stat-l">Awaiting</span>
+        </div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-icon accepted">✅</div>
+        <div class="stat-info">
+          <span class="stat-n" id="cnt-accepted">0</span>
+          <span class="stat-l">Accepted</span>
+        </div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-icon rejected">❌</div>
+        <div class="stat-info">
+          <span class="stat-n" id="cnt-rejected">0</span>
+          <span class="stat-l">Rejected</span>
+        </div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-icon total">📋</div>
+        <div class="stat-info">
+          <span class="stat-n" id="cnt-total">0</span>
+          <span class="stat-l">Total Today</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Two-column console -->
+    <div class="console-body">
+
+      <!-- Left: Incoming / Pending -->
+      <div class="console-col">
+        <div class="col-header">
+          <span class="col-title">Incoming Rides</span>
+          <span class="count-badge" id="pendingBadge">0</span>
+        </div>
+        <div class="col-body" id="pendingCol">
+          <div class="empty-col" id="pendingEmpty">
+            <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                d="M9 17v-2m3 2v-4m3 4v-6M4 21h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v15a1 1 0 001 1z"/>
+            </svg>
+            <p>No pending rides.<br>New bookings appear here instantly.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Recent Actions -->
+      <div class="console-col">
+        <div class="col-header">
+          <span class="col-title">Recent Actions</span>
+          <span class="count-badge" id="recentBadge">0</span>
+        </div>
+        <div class="col-body" id="recentCol">
+          <div class="empty-col" id="recentEmpty">
+            <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                d="M5 13l4 4L19 7"/>
+            </svg>
+            <p>No actions yet.</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div><!-- end #dashboard -->
+
+  <!-- ════════════════════════════════════════════
+       SCRIPTS
+  ════════════════════════════════════════════ -->
+  <script>
+    const BACKEND = 'https://urbanride.onrender.com';
+    let token  = '';
+    let socket = null;
+
+    // ── Stats counters ────────────────────────────────────
+    const stats = { pending: 0, accepted: 0, rejected: 0, total: 0 };
+    function updateStats() {
+      document.getElementById('cnt-pending').textContent  = stats.pending;
+      document.getElementById('cnt-accepted').textContent = stats.accepted;
+      document.getElementById('cnt-rejected').textContent = stats.rejected;
+      document.getElementById('cnt-total').textContent    = stats.total;
+      const badge = document.getElementById('pendingBadge');
+      badge.textContent = stats.pending;
+      badge.className   = 'count-badge' + (stats.pending > 0 ? ' has-items' : '');
+    }
+
+    // ── Relative time ─────────────────────────────────────
+    function relTime(dt) {
+      if (!dt) return '';
+      const diff = Date.now() - new Date(dt).getTime();
+      const m = Math.floor(diff / 60000);
+      if (m < 1)  return 'just now';
+      if (m < 60) return `${m}m ago`;
+      const h = Math.floor(m / 60);
+      return `${h}h ago`;
+    }
+
+    // ── Build pending ride card ───────────────────────────
+    function buildPendingCard(r) {
+      const card = document.createElement('div');
+      card.className = 'ride-card new-in';
+      card.dataset.id = r.id;
+
+      const dt = r.date_time
+        ? new Date(r.date_time).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' })
+        : '—';
+
+      card.innerHTML = `
+        <div class="card-top">
+          <span class="card-id">Ride #${r.id}</span>
+          <span class="card-time">${relTime(r.date_time)}</span>
+        </div>
+        <div class="guest-name">${r.guest_name || '—'}</div>
+        <div class="guest-phone">${r.phone || ''}</div>
+
+        <div class="route-visual">
+          <div class="route-point">
+            <span class="route-dot pickup"></span>
+            <span>${r.pickup || '—'}</span>
+          </div>
+          <div class="route-line"></div>
+          <div class="route-point">
+            <span class="route-dot dropoff"></span>
+            <span>${r.dropoff || '—'}</span>
+          </div>
+        </div>
+
+        <div class="card-meta">
+          <span class="meta-chip">🚗 ${r.vehicle_type || '—'}</span>
+          <span class="meta-chip">👥 ${r.passengers || 1} pax</span>
+          <span class="meta-chip">🕐 ${dt}</span>
+          ${r.trip_type ? `<span class="meta-chip">🗺 ${r.trip_type}</span>` : ''}
+        </div>
+
+        <div class="action-row">
+          <button class="action-btn btn-accept" onclick="respond(${r.id},'accept',this)">
+            ✅ Accept
+          </button>
+          <button class="action-btn btn-reject" onclick="respond(${r.id},'reject',this)">
+            ❌ Reject
+          </button>
+          <button class="action-btn btn-open" onclick="respond(${r.id},'open_market',this)">
+            📤 Open
+          </button>
+        </div>
+      `;
+      return card;
+    }
+
+    // ── Build actioned card ───────────────────────────────
+    function buildActionedCard(r, status) {
+      const card = document.createElement('div');
+      card.className = 'actioned-card';
+      card.dataset.id = r.id;
+
+      const iconMap = { accepted: '✅', rejected: '❌', open_market: '📤' };
+      const labelMap = { accepted: 'Accepted', rejected: 'Rejected', open_market: 'Open Market' };
+
+      card.innerHTML = `
+        <div class="actioned-status ${status}">${iconMap[status] || '?'}</div>
+        <div class="actioned-info">
+          <div class="actioned-name">${r.guest_name || 'Ride #' + r.id}</div>
+          <div class="actioned-route">${r.pickup || ''} → ${r.dropoff || ''}</div>
+        </div>
+        <span class="actioned-badge ${status}">${labelMap[status] || status}</span>
+      `;
+      return card;
+    }
+
+    // ── Respond to ride ───────────────────────────────────
+    async function respond(rideId, action, btn) {
+      // Disable all buttons on this card
+      const card = btn.closest('.ride-card');
+      card.querySelectorAll('.action-btn').forEach(b => b.disabled = true);
+
+      try {
+        const res = await fetch(`${BACKEND}/api/vendor/respond/${rideId}`, {
+          method:  'POST',
+          headers: {
+            'Content-Type':    'application/json',
+            'x-vendor-token':  token
+          },
+          body: JSON.stringify({ action })
+        });
+
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        const { status } = await res.json();
+
+        // Animate card out of pending column
+        card.classList.add('fade-out');
+        card.addEventListener('animationend', () => card.remove(), { once: true });
+
+        // Add to recent column
+        const rideData = {
+          id: rideId,
+          guest_name: card.querySelector('.guest-name')?.textContent,
+          pickup:  card.querySelectorAll('.route-point')[0]?.querySelector('span:last-child')?.textContent,
+          dropoff: card.querySelectorAll('.route-point')[1]?.querySelector('span:last-child')?.textContent
+        };
+        prependActionedCard(rideData, status);
+
+        // Update stats
+        stats.pending  = Math.max(0, stats.pending - 1);
+        if (status === 'accepted') stats.accepted++;
+        else if (status === 'rejected') stats.rejected++;
+        updateStats();
+
+        showToast(`Ride #${rideId} marked as ${status.replace('_', ' ')} ✓`);
+        toggleEmpties();
+
+      } catch (err) {
+        card.querySelectorAll('.action-btn').forEach(b => b.disabled = false);
+        showToast(`Error: ${err.message}`);
+      }
+    }
+
+    function prependActionedCard(r, status) {
+      const col = document.getElementById('recentCol');
+      document.getElementById('recentEmpty').style.display = 'none';
+      const card = buildActionedCard(r, status);
+      col.insertBefore(card, col.firstChild);
+      const badge = document.getElementById('recentBadge');
+      badge.textContent = parseInt(badge.textContent || 0) + 1;
+    }
+
+    function toggleEmpties() {
+      const pending = document.getElementById('pendingCol');
+      const cards   = pending.querySelectorAll('.ride-card');
+      document.getElementById('pendingEmpty').style.display = cards.length ? 'none' : 'flex';
+    }
+
+    // ── Toast ─────────────────────────────────────────────
+    function showToast(msg) {
+      const t = document.createElement('div');
+      t.className   = 'toast';
+      t.textContent = msg;
+      document.body.appendChild(t);
+      setTimeout(() => t.remove(), 3500);
+    }
+
+    // ── Load existing rides ───────────────────────────────
+    async function loadRides() {
+      try {
+        const res  = await fetch(`${BACKEND}/api/vendor/rides`, {
+          headers: { 'x-vendor-token': token }
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const { pending, recent } = await res.json();
+
+        const pendingCol = document.getElementById('pendingCol');
+        const recentCol  = document.getElementById('recentCol');
+
+        if (pending.length > 0) {
+          document.getElementById('pendingEmpty').style.display = 'none';
+          pending.forEach(r => pendingCol.appendChild(buildPendingCard(r)));
+          stats.pending = pending.length;
+        }
+
+        if (recent.length > 0) {
+          document.getElementById('recentEmpty').style.display = 'none';
+          recent.forEach(r => {
+            recentCol.appendChild(buildActionedCard(r, r.status));
+            if (r.status === 'accepted') stats.accepted++;
+            else if (r.status === 'rejected') stats.rejected++;
+          });
+          document.getElementById('recentBadge').textContent = recent.length;
+        }
+
+        stats.total = pending.length + recent.length;
+        updateStats();
+
+      } catch (err) {
+        showToast('Failed to load rides: ' + err.message);
+      }
+    }
+
+    // ── Socket.io ─────────────────────────────────────────
+    function connectSocket() {
+      socket = io(BACKEND, { transports: ['websocket', 'polling'] });
+
+      socket.on('connect', () => {
+        socket.emit('join_vendor', token);
+      });
+
+      socket.on('vendor_auth', ({ ok }) => {
+        if (ok) {
+          document.getElementById('rtDot').classList.add('live');
+          document.getElementById('rtLabel').textContent = 'Live';
+        }
+      });
+
+      // New ride from RabbitMQ consumer
+      socket.on('new_ride', (booking) => {
+        const col = document.getElementById('pendingCol');
+        // Don't add if already displayed
+        if (col.querySelector(`[data-id="${booking.id}"]`)) return;
+
+        document.getElementById('pendingEmpty').style.display = 'none';
+        col.prepend(buildPendingCard(booking));
+        stats.pending++;
+        stats.total++;
+        updateStats();
+        showToast(`🚖 New ride request — #${booking.id} from ${booking.guest_name}`);
+      });
+
+      // Another vendor session actioned a ride — keep in sync
+      socket.on('ride_actioned', ({ id, status }) => {
+        const card = document.getElementById('pendingCol').querySelector(`[data-id="${id}"]`);
+        if (card) {
+          card.classList.add('fade-out');
+          card.addEventListener('animationend', () => { card.remove(); toggleEmpties(); }, { once: true });
+          stats.pending = Math.max(0, stats.pending - 1);
+          updateStats();
+        }
+      });
+
+      socket.on('disconnect', () => {
+        document.getElementById('rtDot').classList.remove('live');
+        document.getElementById('rtLabel').textContent = 'Reconnecting…';
+      });
+    }
+
+    // ── Login ─────────────────────────────────────────────
+    async function doLogin() {
+      const pwd = document.getElementById('passwordInput').value.trim();
+      if (!pwd) return;
+
+      // Validate token by trying to fetch rides
+      try {
+        const res = await fetch(`${BACKEND}/api/vendor/rides`, {
+          headers: { 'x-vendor-token': pwd }
+        });
+        if (res.status === 401) {
+          document.getElementById('loginError').style.display = 'block';
+          return;
+        }
+
+        token = pwd;
+        sessionStorage.setItem('vendorToken', token);
+
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('dashboard').style.display   = 'flex';
+
+        loadRides();
+        connectSocket();
+      } catch (err) {
+        document.getElementById('loginError').textContent = 'Connection failed — is the server running?';
+        document.getElementById('loginError').style.display = 'block';
+      }
+    }
+
+    document.getElementById('loginBtn').addEventListener('click', doLogin);
+    document.getElementById('passwordInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') doLogin();
+    });
+
+    // ── Logout ────────────────────────────────────────────
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+      sessionStorage.removeItem('vendorToken');
+      if (socket) socket.disconnect();
+      document.getElementById('dashboard').style.display   = 'none';
+      document.getElementById('loginScreen').style.display = 'flex';
+      document.getElementById('passwordInput').value = '';
+    });
+
+    // ── Auto-login if token stored ────────────────────────
+    const stored = sessionStorage.getItem('vendorToken');
+    if (stored) {
+      document.getElementById('passwordInput').value = stored;
+      doLogin();
+    }
+  </script>
+</body>
+</html>

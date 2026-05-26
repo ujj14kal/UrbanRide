@@ -183,6 +183,32 @@ router.get('/', async (req, res) => {
   }
 });
 
+// ── PATCH /api/bookings/:id/cancel — Rider cancels an active booking ─────────
+// Sets status to 'cancelled' (keeps the record in history) and invalidates caches.
+router.patch('/:id/cancel', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [result] = await pool.query(
+      "UPDATE rides SET status = 'cancelled' WHERE id = ? AND status IN ('pending', 'open_market')",
+      [id]
+    );
+
+    if (result.affectedRows === 0) {
+      // Either not found or already actioned — don't allow cancelling an accepted ride
+      return res.status(409).json({ success: false, error: 'Ride cannot be cancelled in its current state.' });
+    }
+
+    // Evict from caches
+    statusCache.del(`status_${id}`);
+    bookingCache.del(`booking_${id}`);
+
+    res.json({ success: true, status: 'cancelled' });
+  } catch (err) {
+    console.error('❌ Cancel error:', err.message);
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
 // ── DELETE /api/bookings/:id ──────────────────────────────────────────────────
 router.delete('/:id', async (req, res) => {
   try {

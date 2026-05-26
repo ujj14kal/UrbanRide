@@ -10,38 +10,43 @@
   <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-auth-compat.js"></script>
+  <!-- Socket.io -->
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js" crossorigin="anonymous"></script>
 </head>
 
 <body>
+
   <!-- ── Navbar ─────────────────────────────────────────── -->
   <header class="navbar">
     <div class="logo">UrbanRide</div>
     <nav>
       <a href="/html/index.html">Home</a>
-      <a href="/html/booking.html" class="book-now">Book Now</a>
+      <a href="/html/booking.html" class="book-now">Book a Ride</a>
     </nav>
   </header>
 
-  <!-- ── Auth section (phone → OTP → bookings) ─────────── -->
-  <section class="account-section" id="authSection">
-    <h1>Your Account</h1>
-    <p>Verify your mobile number to view all your bookings.</p>
-
+  <!-- ══════════════════════════════════════════════════════
+       AUTH SECTION  (hidden once verified)
+  ══════════════════════════════════════════════════════ -->
+  <section class="auth-section" id="authSection">
     <div class="auth-card">
 
-      <!-- Step 1: Enter phone -->
+      <!-- Step 1: Phone -->
       <form id="phoneForm">
-        <h3>Enter your mobile number</h3>
-        <input type="tel" id="phoneInput" placeholder="+91 98765 43210" required />
-        <p class="phone-hint">Include country code, e.g. +91 for India.</p>
+        <h3>Sign in to UrbanRide</h3>
+        <p class="auth-sub">Enter your mobile number to continue.</p>
+        <input type="tel" id="phoneInput" placeholder="+91 98765 43210" autocomplete="tel" />
+        <p class="phone-hint">Include country code — e.g. +91 for India.</p>
         <div id="recaptcha-container"></div>
         <button type="submit" id="sendOtpBtn">Send OTP →</button>
       </form>
 
-      <!-- Step 2: Verify OTP (hidden until OTP is sent) -->
+      <!-- Step 2: OTP -->
       <form id="otpForm" style="display:none;">
-        <h3>Enter the OTP sent to <span id="phoneSent"></span></h3>
-        <input type="text" id="otpInput" placeholder="6-digit code" maxlength="6" required />
+        <h3>Enter OTP</h3>
+        <p class="auth-sub">Sent to <strong id="phoneSent"></strong></p>
+        <input type="text" id="otpInput" placeholder="6-digit code" maxlength="6"
+               inputmode="numeric" autocomplete="one-time-code" />
         <button type="submit" id="verifyOtpBtn">Verify →</button>
         <span class="back-link" id="backToPhone">← Change number</span>
       </form>
@@ -49,24 +54,92 @@
     </div>
   </section>
 
-  <!-- ── Bookings section (shown after OTP verified) ─────── -->
-  <section id="bookingsSection" style="display:none;">
-    <div class="bookings-header">
-      <h2>Your Rides</h2>
-      <span class="bookings-count" id="bookingsCount">0 rides</span>
-    </div>
+  <!-- ══════════════════════════════════════════════════════
+       DASHBOARD  (shown after OTP verified)
+  ══════════════════════════════════════════════════════ -->
+  <section id="dashboardSection">
+    <div class="dash-grid">
 
-    <!-- hidden desktop table (kept for accessibility / copy-paste) -->
-    <div class="table-wrapper" style="display:none!important;">
-      <table id="bookingsTable"><thead><tr>
-        <th>ID</th><th>Guest</th><th>Phone</th><th>Email</th>
-        <th>Passengers</th><th>Pickup</th><th>Dropoff</th>
-        <th>Trip</th><th>Date</th><th>Vehicle</th><th>Driver</th>
-      </tr></thead><tbody id="tableBody"></tbody></table>
-    </div>
+      <!-- ──────────────────────────────────────────────────
+           COL 1 — Profile card
+      ────────────────────────────────────────────────── -->
+      <aside class="profile-card">
 
-    <!-- Mobile-first cards -->
-    <div class="mobile-cards" id="mobileCardsContainer"></div>
+        <div class="avatar-wrap">
+          <img class="avatar-img" id="avatarImg"
+               src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 88 88'%3E%3Crect width='88' height='88' fill='%23e5e5e5'/%3E%3Ccircle cx='44' cy='34' r='16' fill='%23a3a3a3'/%3E%3Cellipse cx='44' cy='72' rx='24' ry='16' fill='%23a3a3a3'/%3E%3C/svg%3E"
+               alt="Profile photo" />
+          <label class="avatar-edit" for="avatarInput" title="Change photo">
+            ✏️
+          </label>
+          <input type="file" id="avatarInput" accept="image/*" />
+        </div>
+
+        <p class="profile-name" id="profileName">—</p>
+        <p class="profile-phone" id="profilePhone">—</p>
+
+        <div class="profile-stats">
+          <div class="p-stat">
+            <span class="p-stat-n" id="statTotal">0</span>
+            <span class="p-stat-l">Total</span>
+          </div>
+          <div class="p-stat">
+            <span class="p-stat-n" id="statActive">0</span>
+            <span class="p-stat-l">Active</span>
+          </div>
+          <div class="p-stat">
+            <span class="p-stat-n" id="statCompleted">0</span>
+            <span class="p-stat-l">Completed</span>
+          </div>
+          <div class="p-stat">
+            <span class="p-stat-n" id="statCancelled">0</span>
+            <span class="p-stat-l">Cancelled</span>
+          </div>
+        </div>
+
+        <a href="/html/booking.html" class="book-cta" id="bookCtaBtn">Book a Ride →</a>
+        <button class="book-cta" id="signOutBtn"
+                style="margin-top:.65rem;background:transparent;border:1.5px solid #e5e5e5;color:#525252;font-weight:600;">
+          Sign Out
+        </button>
+      </aside>
+
+      <!-- ──────────────────────────────────────────────────
+           COL 2 — Active ride
+      ────────────────────────────────────────────────── -->
+      <div class="active-panel">
+        <div class="section-hdr">
+          <span class="section-title">Active Ride</span>
+          <span class="section-count" id="activeCount">0</span>
+        </div>
+
+        <div class="active-card" id="activeCard">
+          <!-- Content injected by JS — no-ride default -->
+          <div class="no-ride" id="noRideState">
+            <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                d="M8 7h12M8 12h8M8 17h4M3 7h.01M3 12h.01M3 17h.01"/>
+            </svg>
+            <p>No active ride right now.<br>Book one to get started!</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ──────────────────────────────────────────────────
+           COL 3 — Ride history
+      ────────────────────────────────────────────────── -->
+      <div class="history-panel">
+        <div class="section-hdr">
+          <span class="section-title">Ride History</span>
+          <span class="section-count" id="histCount">0</span>
+        </div>
+
+        <div class="history-list" id="historyList">
+          <div class="panel-empty" id="histEmpty">No past rides yet.</div>
+        </div>
+      </div>
+
+    </div><!-- /.dash-grid -->
   </section>
 
   <!-- ── Footer ─────────────────────────────────────────── -->
@@ -111,182 +184,434 @@
     </div>
   </footer>
 
-  <!-- ── Scripts ────────────────────────────────────────── -->
+  <!-- ══════════════════════════════════════════════════════
+       SCRIPTS
+  ══════════════════════════════════════════════════════ -->
   <script>
     const BACKEND = 'https://urbanride.onrender.com';
 
-    // ── Firebase ──────────────────────────────────────────
+    // ── Firebase init ─────────────────────────────────────
     firebase.initializeApp({
-      apiKey:            "AIzaSyD2FTLHAoefaLDp33fPYAseWAB3m_F8Kik",
-      authDomain:        "urbanride-84afe.firebaseapp.com",
-      projectId:         "urbanride-84afe",
-      storageBucket:     "urbanride-84afe.appspot.com",
-      messagingSenderId: "302121704417",
-      appId:             "1:302121704417:web:d3e320a2232ee77411d0a0"
+      apiKey:            'AIzaSyD2FTLHAoefaLDp33fPYAseWAB3m_F8Kik',
+      authDomain:        'urbanride-84afe.firebaseapp.com',
+      projectId:         'urbanride-84afe',
+      storageBucket:     'urbanride-84afe.appspot.com',
+      messagingSenderId: '302121704417',
+      appId:             '1:302121704417:web:d3e320a2232ee77411d0a0'
     });
     const auth = firebase.auth();
-    let confirmationResult;
+    let confirmationResult = null;
+    let currentPhone       = '';   // normalised phone after verify
+    let activeRideId       = null; // ID of the currently active ride (if any)
+    let socket             = null;
 
     // ── DOM refs ──────────────────────────────────────────
-    const phoneForm   = document.getElementById('phoneForm');
-    const otpForm     = document.getElementById('otpForm');
-    const authSection = document.getElementById('authSection');
-    const bookingsSection = document.getElementById('bookingsSection');
-    const cards       = document.getElementById('mobileCardsContainer');
-    const countBadge  = document.getElementById('bookingsCount');
+    const authSection      = document.getElementById('authSection');
+    const dashSection      = document.getElementById('dashboardSection');
+    const phoneForm        = document.getElementById('phoneForm');
+    const otpForm          = document.getElementById('otpForm');
+    const activeCard       = document.getElementById('activeCard');
+    const noRideState      = document.getElementById('noRideState');
+    const historyList      = document.getElementById('historyList');
 
-    // ── Step 1 — Send OTP ─────────────────────────────────
+    // ════════════════════════════════════════════════════
+    // AUTH FLOW
+    // ════════════════════════════════════════════════════
+
     phoneForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       let phone = document.getElementById('phoneInput').value.trim();
       if (!phone) return;
-      if (!phone.startsWith('+')) phone = '+91' + phone;
+      if (!phone.startsWith('+')) phone = '+91' + phone.replace(/\D/g, '');
 
       const btn = document.getElementById('sendOtpBtn');
-      btn.disabled = true;
-      btn.textContent = 'Sending…';
-
-      window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier(
-        'recaptcha-container', { size: 'invisible' }
-      );
+      btn.disabled = true; btn.textContent = 'Sending…';
 
       try {
+        window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier(
+          'recaptcha-container', { size: 'invisible' }
+        );
         confirmationResult = await auth.signInWithPhoneNumber(phone, window.recaptchaVerifier);
         document.getElementById('phoneSent').textContent = phone;
         phoneForm.style.display = 'none';
         otpForm.style.display   = 'block';
       } catch (err) {
         alert('Could not send OTP: ' + err.message);
-        btn.disabled = false;
-        btn.textContent = 'Send OTP →';
+        btn.disabled = false; btn.textContent = 'Send OTP →';
       }
     });
 
-    // ── Back to phone ─────────────────────────────────────
     document.getElementById('backToPhone').addEventListener('click', () => {
       otpForm.style.display   = 'none';
       phoneForm.style.display = 'block';
-      document.getElementById('sendOtpBtn').disabled    = false;
-      document.getElementById('sendOtpBtn').textContent = 'Send OTP →';
+      const btn = document.getElementById('sendOtpBtn');
+      btn.disabled = false; btn.textContent = 'Send OTP →';
     });
 
-    // ── Step 2 — Verify OTP ───────────────────────────────
     otpForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const otp = document.getElementById('otpInput').value.trim();
       if (!otp) return;
 
       const btn = document.getElementById('verifyOtpBtn');
-      btn.disabled = true;
-      btn.textContent = 'Verifying…';
+      btn.disabled = true; btn.textContent = 'Verifying…';
 
       try {
         await confirmationResult.confirm(otp);
-        const rawPhone = document.getElementById('phoneInput').value.trim();
-        authSection.style.display    = 'none';
-        bookingsSection.style.display = 'block';
-        fetchBookings(rawPhone);
+        currentPhone = document.getElementById('phoneInput').value.trim();
+        if (!currentPhone.startsWith('+')) currentPhone = '+91' + currentPhone.replace(/\D/g, '');
+        showDashboard(currentPhone);
       } catch (err) {
-        alert('Invalid OTP. Please try again.');
-        btn.disabled = false;
-        btn.textContent = 'Verify →';
+        alert('Invalid OTP — please try again.');
+        btn.disabled = false; btn.textContent = 'Verify →';
       }
     });
 
-    // ── Fetch and render bookings ─────────────────────────
-    async function fetchBookings(phone) {
-      cards.innerHTML = '<p style="text-align:center;color:#a3a3a3;padding:3rem 0">Loading rides…</p>';
+    // ════════════════════════════════════════════════════
+    // DASHBOARD INIT
+    // ════════════════════════════════════════════════════
 
+    function showDashboard(phone) {
+      authSection.style.display = 'none';
+      dashSection.style.display = 'block';
+
+      // Profile name (try localStorage first, fall back to number)
+      const savedName = localStorage.getItem('urbanride_name_' + phone) || phone;
+      document.getElementById('profileName').textContent  = savedName;
+      document.getElementById('profilePhone').textContent = phone;
+
+      // Avatar
+      const dp = localStorage.getItem('urbanride_dp_' + phone);
+      if (dp) document.getElementById('avatarImg').src = dp;
+
+      // Avatar edit
+      document.getElementById('avatarInput').addEventListener('change', (ev) => {
+        const file = ev.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (re) => {
+          const b64 = re.target.result;
+          document.getElementById('avatarImg').src = b64;
+          localStorage.setItem('urbanride_dp_' + phone, b64);
+        };
+        reader.readAsDataURL(file);
+      });
+
+      loadBookings(phone);
+    }
+
+    // ════════════════════════════════════════════════════
+    // LOAD ALL BOOKINGS
+    // ════════════════════════════════════════════════════
+
+    async function loadBookings(phone) {
       try {
-        const res  = await fetch(`${BACKEND}/api/bookings/by-phone/${encodeURIComponent(phone)}`);
-        if (res.status === 404) {
-          cards.innerHTML = emptyState('No rides found for this number.');
-          countBadge.textContent = '0 rides';
-          return;
-        }
+        const res = await fetch(
+          `${BACKEND}/api/bookings/by-phone/${encodeURIComponent(phone)}`
+        );
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const bookings = await res.json();
 
-        const data = await res.json();
-        countBadge.textContent = `${data.length} ride${data.length !== 1 ? 's' : ''}`;
-        cards.innerHTML = '';
-        data.forEach(row => cards.appendChild(buildCard(row)));
+        const active  = bookings.filter(b => ['pending', 'accepted', 'open_market'].includes(b.status));
+        const history = bookings.filter(b => !['pending', 'accepted', 'open_market'].includes(b.status));
+
+        // Stats
+        document.getElementById('statTotal').textContent     = bookings.length;
+        document.getElementById('statActive').textContent    = active.length;
+        document.getElementById('statCompleted').textContent = bookings.filter(b => b.status === 'accepted').length;
+        document.getElementById('statCancelled').textContent = bookings.filter(b => b.status === 'cancelled').length;
+        document.getElementById('activeCount').textContent   = active.length;
+        document.getElementById('histCount').textContent     = history.length;
+
+        // Active ride (only 1 at a time)
+        if (active.length > 0) {
+          renderActiveRide(active[0]);
+          disableBookCta();
+        } else {
+          showNoRide();
+          enableBookCta();
+        }
+
+        // History
+        if (history.length > 0) {
+          document.getElementById('histEmpty').style.display = 'none';
+          history.forEach(r => historyList.appendChild(buildHistCard(r)));
+        }
+
       } catch (err) {
-        cards.innerHTML = `<p style="color:#dc2626;text-align:center;padding:2rem">Error: ${err.message}</p>`;
+        activeCard.innerHTML = `<p style="color:#dc2626;padding:1.5rem;font-size:.875rem">
+          Could not load rides: ${err.message}</p>`;
       }
     }
 
-    // ── Build a booking card ──────────────────────────────
-    function buildCard(r) {
-      const card = document.createElement('div');
-      card.className = 'mobile-card';
+    // ════════════════════════════════════════════════════
+    // ACTIVE RIDE PANEL
+    // ════════════════════════════════════════════════════
 
-      const statusClass = (r.status || 'pending').toLowerCase().replace(' ', '_');
-      const statusLabel = {
-        pending:     'Pending',
-        accepted:    'Accepted',
-        rejected:    'Rejected',
-        open_market: 'Open Market',
-        cancelled:   'Cancelled'
-      }[statusClass] || r.status;
+    function renderActiveRide(r) {
+      activeRideId = r.id;
+      activeCard.classList.add('has-ride');
 
-      const dateStr = r.date_time
+      const dtStr = r.date_time
         ? new Date(r.date_time).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
         : '—';
 
-      card.innerHTML = `
-        <div class="card-header">
-          <span class="card-id">Ride #${r.id}</span>
-          <span class="status-badge ${statusClass}">${statusLabel}</span>
+      activeCard.innerHTML = `
+        <!-- Live status indicator -->
+        <div class="live-status">
+          <span class="live-dot ${r.status}" id="liveDot"></span>
+          <span class="live-status-text" id="liveStatusText">${statusLabel(r.status)}</span>
         </div>
 
-        <div class="card-route">
-          <div class="route-point">
-            <span class="route-dot pickup"></span>
+        <!-- Ride ID + pill -->
+        <div class="ride-id-row">
+          <span class="ride-id-lbl">Ride #${r.id}</span>
+          <span class="status-pill ${r.status}" id="statusPill">${statusLabel(r.status)}</span>
+        </div>
+
+        <!-- Route -->
+        <div class="route-block">
+          <div class="rp">
+            <span class="rd p"></span>
             <span>${r.pickup || '—'}</span>
           </div>
-          <div class="route-point">
-            <span class="route-dot dropoff"></span>
+          <div class="rp">
+            <span class="rd d"></span>
             <span>${r.dropoff || '—'}</span>
           </div>
         </div>
 
-        <div class="card-details">
-          <div class="card-detail-item">
-            <span class="detail-key">Date</span>
-            <span class="detail-value">${dateStr}</span>
-          </div>
-          <div class="card-detail-item">
-            <span class="detail-key">Vehicle</span>
-            <span class="detail-value">${r.vehicle_type || '—'}</span>
-          </div>
-          <div class="card-detail-item">
-            <span class="detail-key">Passengers</span>
-            <span class="detail-value">${r.passengers || 1}</span>
-          </div>
-          <div class="card-detail-item">
-            <span class="detail-key">Driver</span>
-            <span class="detail-value">${r.associated_member || '—'}</span>
-          </div>
-          ${r.status === 'accepted' ? `
-          <div class="card-detail-item" style="grid-column:1/-1;margin-top:.5rem">
-            <a href="${BACKEND}/invoice/${r.id}"
-               style="font-size:.82rem;font-weight:600;color:#000;text-decoration:underline;text-underline-offset:3px"
-               download>⬇ Download Invoice</a>
-          </div>` : ''}
+        <!-- Meta chips -->
+        <div class="ride-meta-row">
+          <span class="meta-tag">🚗 ${r.vehicle_type || '—'}</span>
+          <span class="meta-tag">👥 ${r.passengers || 1} pax</span>
+          <span class="meta-tag">🕐 ${dtStr}</span>
+          ${r.trip_type ? `<span class="meta-tag">🗺 ${r.trip_type}</span>` : ''}
+          ${r.associated_member ? `<span class="meta-tag">🧑‍✈️ ${r.associated_member}</span>` : ''}
+        </div>
+
+        <!-- Cancel button -->
+        <button class="cancel-btn" id="cancelBtn" onclick="cancelRide(${r.id})">
+          Cancel Ride
+        </button>
+      `;
+
+      // Connect Socket.io for live updates
+      connectSocket(r.id, r.status);
+    }
+
+    function showNoRide() {
+      activeRideId = null;
+      activeCard.classList.remove('has-ride');
+      activeCard.innerHTML = `
+        <div class="no-ride">
+          <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+              d="M8 7h12M8 12h8M8 17h4M3 7h.01M3 12h.01M3 17h.01"/>
+          </svg>
+          <p>No active ride right now.<br>Book one to get started!</p>
+        </div>`;
+    }
+
+    function disableBookCta() {
+      const btn = document.getElementById('bookCtaBtn');
+      btn.classList.add('disabled');
+      btn.removeAttribute('href');
+      btn.title = 'You already have an active ride';
+    }
+
+    function enableBookCta() {
+      const btn = document.getElementById('bookCtaBtn');
+      btn.classList.remove('disabled');
+      btn.setAttribute('href', '/html/booking.html');
+      btn.title = '';
+    }
+
+    // ════════════════════════════════════════════════════
+    // SOCKET.IO — real-time status updates
+    // ════════════════════════════════════════════════════
+
+    function connectSocket(rideId) {
+      if (socket) socket.disconnect();
+
+      socket = io(BACKEND, { transports: ['websocket', 'polling'] });
+
+      socket.on('connect', () => {
+        socket.emit('join_booking', rideId);
+      });
+
+      socket.on('status_update', ({ bookingId, status }) => {
+        if (String(bookingId) !== String(rideId)) return;
+        applyStatusUpdate(status, rideId);
+      });
+
+      socket.on('disconnect', () => {
+        // fall back to polling if socket drops
+        startPollingFallback(rideId);
+      });
+    }
+
+    function applyStatusUpdate(status, rideId) {
+      const dot  = document.getElementById('liveDot');
+      const text = document.getElementById('liveStatusText');
+      const pill = document.getElementById('statusPill');
+      if (!dot || !text || !pill) return;
+
+      // Remove old status classes, add new
+      dot.className  = `live-dot ${status}`;
+      text.textContent = statusLabel(status);
+      pill.className = `status-pill ${status}`;
+      pill.textContent = statusLabel(status);
+
+      // If terminal status (accepted / rejected), update stats + history
+      if (status === 'accepted' || status === 'rejected' || status === 'cancelled') {
+        if (socket) socket.disconnect();
+        // Short delay so user reads the final state, then refresh
+        setTimeout(() => loadBookings(currentPhone), 2500);
+      }
+    }
+
+    // HTTP poll fallback
+    let pollInterval = null;
+    function startPollingFallback(rideId) {
+      if (pollInterval) return; // already polling
+      pollInterval = setInterval(async () => {
+        try {
+          const res  = await fetch(`${BACKEND}/booking-status/${rideId}`);
+          const data = await res.json();
+          if (data.status) applyStatusUpdate(data.status, rideId);
+        } catch (_) {}
+      }, 5000);
+    }
+
+    // ════════════════════════════════════════════════════
+    // CANCEL RIDE
+    // ════════════════════════════════════════════════════
+
+    async function cancelRide(rideId) {
+      if (!confirm('Cancel this ride? This cannot be undone.')) return;
+
+      const btn = document.getElementById('cancelBtn');
+      if (btn) { btn.disabled = true; btn.textContent = 'Cancelling…'; }
+
+      try {
+        const res = await fetch(`${BACKEND}/api/bookings/${rideId}/cancel`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (res.status === 409) {
+          // Ride already accepted — can't self-cancel
+          showToast('⚠️ This ride has already been accepted and cannot be cancelled here. Please call support.');
+          if (btn) { btn.disabled = false; btn.textContent = 'Cancel Ride'; }
+          return;
+        }
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        if (socket) socket.disconnect();
+        clearInterval(pollInterval); pollInterval = null;
+        activeRideId = null;
+
+        // Refresh dashboard
+        historyList.innerHTML = '<div class="panel-empty" id="histEmpty">Loading…</div>';
+        document.getElementById('activeCount').textContent = '0';
+        await loadBookings(currentPhone);
+        showToast('✅ Ride cancelled.');
+      } catch (err) {
+        showToast('Could not cancel: ' + err.message);
+        if (btn) { btn.disabled = false; btn.textContent = 'Cancel Ride'; }
+      }
+    }
+
+    // ════════════════════════════════════════════════════
+    // HISTORY CARDS
+    // ════════════════════════════════════════════════════
+
+    function buildHistCard(r) {
+      const card = document.createElement('div');
+      card.className = 'hist-card';
+
+      const dtStr = r.date_time
+        ? new Date(r.date_time).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
+        : '—';
+
+      card.innerHTML = `
+        <div class="hist-top">
+          <span class="hist-id">Ride #${r.id}</span>
+          <span class="status-pill ${r.status}">${statusLabel(r.status)}</span>
+        </div>
+        <div class="hist-route">${r.pickup || '—'} → ${r.dropoff || '—'}</div>
+        <div class="hist-meta">
+          <span>${dtStr}</span>
+          <span>${r.vehicle_type || '—'}</span>
+          <span>${r.passengers || 1} pax</span>
+          ${r.status === 'accepted'
+            ? `<a href="${BACKEND}/invoice/${r.id}" download
+                 style="color:#2563eb;font-weight:600;text-decoration:underline;text-underline-offset:2px">
+                 ⬇ Invoice</a>`
+            : ''}
         </div>
       `;
       return card;
     }
 
-    function emptyState(msg) {
-      return `<div class="empty-state">
-        <svg width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-            d="M9 17v-2m3 2v-4m3 4v-6M4 21h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v15a1 1 0 001 1z"/>
-        </svg>
-        <p>${msg}</p>
-      </div>`;
+    // ════════════════════════════════════════════════════
+    // SIGN OUT
+    // ════════════════════════════════════════════════════
+
+    document.getElementById('signOutBtn').addEventListener('click', async () => {
+      if (socket) socket.disconnect();
+      clearInterval(pollInterval); pollInterval = null;
+      await auth.signOut();
+      dashSection.style.display = 'none';
+      authSection.style.display = 'flex';
+      phoneForm.style.display   = 'block';
+      otpForm.style.display     = 'none';
+      document.getElementById('phoneInput').value = '';
+      document.getElementById('otpInput').value   = '';
+      const btn = document.getElementById('sendOtpBtn');
+      btn.disabled = false; btn.textContent = 'Send OTP →';
+      currentPhone = ''; activeRideId = null;
+      // Reset history
+      historyList.innerHTML = '<div class="panel-empty" id="histEmpty">No past rides yet.</div>';
+    });
+
+    // ════════════════════════════════════════════════════
+    // HELPERS
+    // ════════════════════════════════════════════════════
+
+    function statusLabel(s) {
+      return { pending: 'Pending', accepted: 'Accepted', rejected: 'Rejected',
+               open_market: 'Open Market', cancelled: 'Cancelled' }[s] || s;
+    }
+
+    function showToast(msg) {
+      const t = document.createElement('div');
+      t.style.cssText = `
+        position:fixed;bottom:1.5rem;right:1.5rem;
+        background:#000;color:#fff;
+        padding:.75rem 1.25rem;border-radius:10px;
+        font-size:.875rem;font-weight:500;
+        box-shadow:0 8px 24px rgba(0,0,0,.18);
+        z-index:9999;animation:toastSlide .3s ease;
+      `;
+      t.textContent = msg;
+
+      // Inline keyframe via style element if not already present
+      if (!document.getElementById('toastStyle')) {
+        const s = document.createElement('style');
+        s.id = 'toastStyle';
+        s.textContent = `@keyframes toastSlide {
+          from { opacity:0; transform:translateY(10px); }
+          to   { opacity:1; transform:translateY(0); }
+        }`;
+        document.head.appendChild(s);
+      }
+
+      document.body.appendChild(t);
+      setTimeout(() => t.remove(), 3200);
     }
   </script>
+
 </body>
 </html>
