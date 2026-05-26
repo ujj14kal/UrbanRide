@@ -55,10 +55,10 @@
         </div>
       </div>
       <div class="stat-cell">
-        <div class="stat-icon accepted">✅</div>
+        <div class="stat-icon accepted">🚗</div>
         <div class="stat-info">
           <span class="stat-n" id="cnt-accepted">0</span>
-          <span class="stat-l">Accepted</span>
+          <span class="stat-l">In Ride</span>
         </div>
       </div>
       <div class="stat-cell">
@@ -75,6 +75,16 @@
           <span class="stat-l">Total Today</span>
         </div>
       </div>
+    </div>
+
+    <!-- Active Ride Banner (hidden when no ride is in progress) -->
+    <div class="active-ride-bar" id="activeRideBar" style="display:none">
+      <div class="arb-left">
+        <span class="arb-pulse"></span>
+        <span class="arb-label">IN RIDE</span>
+        <span class="arb-info" id="arbInfo">—</span>
+      </div>
+      <button class="end-ride-btn" id="endRideBtn">✓ End Ride</button>
     </div>
 
     <!-- Two-column console -->
@@ -122,12 +132,13 @@
   ════════════════════════════════════════════ -->
   <script>
     const BACKEND = 'https://urbanride.onrender.com';
-    let token       = '';
-    let socket      = null;
-    let pollTimer   = null;   // HTTP fallback — runs until Socket.io goes live
-    let socketLive  = false;
+    let token          = '';
+    let socket         = null;
+    let pollTimer      = null;
+    let socketLive     = false;
+    let activeRideId   = null;   // tracks the currently in-progress ride
 
-    // ── Stats counters ────────────────────────────────────
+    // ── Stats ─────────────────────────────────────────────
     const stats = { pending: 0, accepted: 0, rejected: 0, total: 0 };
     function updateStats() {
       document.getElementById('cnt-pending').textContent  = stats.pending;
@@ -144,21 +155,84 @@
       if (!dt) return '';
       const diff = Date.now() - new Date(dt).getTime();
       const m = Math.floor(diff / 60000);
-      if (m < 1)  return 'just now';
+      if (m < 1) return 'just now';
       if (m < 60) return `${m}m ago`;
-      const h = Math.floor(m / 60);
-      return `${h}h ago`;
+      return `${Math.floor(m / 60)}h ago`;
     }
+
+    // ── Active ride banner ────────────────────────────────
+    function showActiveBanner(r) {
+      activeRideId = r.id;
+      document.getElementById('arbInfo').textContent =
+        `Ride #${r.id} · ${r.guest_name} · ${r.pickup} → ${r.dropoff} · ${r.vehicle_type}`;
+      document.getElementById('activeRideBar').style.display = 'flex';
+      document.getElementById('endRideBtn').dataset.id = r.id;
+      disableAcceptButtons();
+    }
+
+    function clearActiveBanner() {
+      activeRideId = null;
+      document.getElementById('activeRideBar').style.display = 'none';
+      document.getElementById('endRideBtn').dataset.id = '';
+      enableAcceptButtons();
+    }
+
+    function disableAcceptButtons() {
+      document.querySelectorAll('.btn-accept').forEach(b => {
+        b.disabled = true;
+        b.title    = 'End the current ride before accepting another';
+      });
+    }
+
+    function enableAcceptButtons() {
+      document.querySelectorAll('.btn-accept').forEach(b => {
+        b.disabled = false;
+        b.title    = '';
+      });
+    }
+
+    // ── End ride ──────────────────────────────────────────
+    document.getElementById('endRideBtn').addEventListener('click', async () => {
+      const rideId = document.getElementById('endRideBtn').dataset.id;
+      if (!rideId) return;
+
+      const btn = document.getElementById('endRideBtn');
+      btn.disabled = true;
+      btn.textContent = 'Ending…';
+
+      try {
+        const res = await fetch(`${BACKEND}/api/vendor/end-ride/${rideId}`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json', 'x-vendor-token': token }
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        clearActiveBanner();
+        stats.accepted = Math.max(0, stats.accepted - 1);
+        updateStats();
+        showToast(`✅ Ride #${rideId} ended — invoice emailed to rider`);
+
+        // Add to recent column
+        prependActionedCard({ id: rideId, guest_name: `Ride #${rideId}`, pickup: '', dropoff: '' }, 'completed');
+
+      } catch (err) {
+        showToast(`Error ending ride: ${err.message}`);
+        btn.disabled = false;
+        btn.textContent = '✓ End Ride';
+      }
+    });
 
     // ── Build pending ride card ───────────────────────────
     function buildPendingCard(r) {
       const card = document.createElement('div');
-      card.className = 'ride-card new-in';
+      card.className  = 'ride-card new-in';
       card.dataset.id = r.id;
 
       const dt = r.date_time
         ? new Date(r.date_time).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' })
         : '—';
+
+      const acceptDisabled = activeRideId ? 'disabled title="End current ride first"' : '';
 
       card.innerHTML = `
         <div class="card-top">
@@ -167,7 +241,6 @@
         </div>
         <div class="guest-name">${r.guest_name || '—'}</div>
         <div class="guest-phone">${r.phone || ''}</div>
-
         <div class="route-visual">
           <div class="route-point">
             <span class="route-dot pickup"></span>
@@ -179,37 +252,28 @@
             <span>${r.dropoff || '—'}</span>
           </div>
         </div>
-
         <div class="card-meta">
           <span class="meta-chip">🚗 ${r.vehicle_type || '—'}</span>
           <span class="meta-chip">👥 ${r.passengers || 1} pax</span>
           <span class="meta-chip">🕐 ${dt}</span>
           ${r.trip_type ? `<span class="meta-chip">🗺 ${r.trip_type}</span>` : ''}
         </div>
-
         <div class="action-row">
-          <button class="action-btn btn-accept" onclick="respond(${r.id},'accept',this)">
-            ✅ Accept
-          </button>
-          <button class="action-btn btn-reject" onclick="respond(${r.id},'reject',this)">
-            ❌ Reject
-          </button>
-          <button class="action-btn btn-open" onclick="respond(${r.id},'open_market',this)">
-            📤 Open
-          </button>
-        </div>
-      `;
+          <button class="action-btn btn-accept" onclick="respond(${r.id},'accept',this)" ${acceptDisabled}>✅ Accept</button>
+          <button class="action-btn btn-reject" onclick="respond(${r.id},'reject',this)">❌ Reject</button>
+          <button class="action-btn btn-open"   onclick="respond(${r.id},'open_market',this)">📤 Open</button>
+        </div>`;
       return card;
     }
 
-    // ── Build actioned card ───────────────────────────────
+    // ── Build actioned / recent card ──────────────────────
     function buildActionedCard(r, status) {
       const card = document.createElement('div');
-      card.className = 'actioned-card';
+      card.className  = 'actioned-card';
       card.dataset.id = r.id;
 
-      const iconMap = { accepted: '✅', rejected: '❌', open_market: '📤' };
-      const labelMap = { accepted: 'Accepted', rejected: 'Rejected', open_market: 'Open Market' };
+      const iconMap  = { accepted: '🚗', rejected: '❌', open_market: '📤', completed: '✅', cancelled: '🚫' };
+      const labelMap = { accepted: 'In Ride', rejected: 'Rejected', open_market: 'Open Market', completed: 'Completed', cancelled: 'Cancelled' };
 
       card.innerHTML = `
         <div class="actioned-status ${status}">${iconMap[status] || '?'}</div>
@@ -217,51 +281,56 @@
           <div class="actioned-name">${r.guest_name || 'Ride #' + r.id}</div>
           <div class="actioned-route">${r.pickup || ''} → ${r.dropoff || ''}</div>
         </div>
-        <span class="actioned-badge ${status}">${labelMap[status] || status}</span>
-      `;
+        <span class="actioned-badge ${status}">${labelMap[status] || status}</span>`;
       return card;
     }
 
-    // ── Respond to ride ───────────────────────────────────
+    // ── Respond to a pending ride ─────────────────────────
     async function respond(rideId, action, btn) {
-      // Disable all buttons on this card
       const card = btn.closest('.ride-card');
       card.querySelectorAll('.action-btn').forEach(b => b.disabled = true);
 
       try {
         const res = await fetch(`${BACKEND}/api/vendor/respond/${rideId}`, {
           method:  'POST',
-          headers: {
-            'Content-Type':    'application/json',
-            'x-vendor-token':  token
-          },
-          body: JSON.stringify({ action })
+          headers: { 'Content-Type': 'application/json', 'x-vendor-token': token },
+          body:    JSON.stringify({ action })
         });
 
+        // 409 = already have an active ride
+        if (res.status === 409) {
+          const { error } = await res.json();
+          showToast(`⚠️ ${error}`);
+          card.querySelectorAll('.action-btn').forEach(b => {
+            b.disabled = b.classList.contains('btn-accept');
+          });
+          return;
+        }
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-        const { status } = await res.json();
+        const { status, ride } = await res.json();
 
-        // Animate card out of pending column
         card.classList.add('fade-out');
         card.addEventListener('animationend', () => card.remove(), { once: true });
 
-        // Add to recent column
-        const rideData = {
-          id: rideId,
-          guest_name: card.querySelector('.guest-name')?.textContent,
-          pickup:  card.querySelectorAll('.route-point')[0]?.querySelector('span:last-child')?.textContent,
-          dropoff: card.querySelectorAll('.route-point')[1]?.querySelector('span:last-child')?.textContent
-        };
-        prependActionedCard(rideData, status);
+        stats.pending = Math.max(0, stats.pending - 1);
 
-        // Update stats
-        stats.pending  = Math.max(0, stats.pending - 1);
-        if (status === 'accepted') stats.accepted++;
-        else if (status === 'rejected') stats.rejected++;
+        if (status === 'accepted') {
+          stats.accepted++;
+          if (ride) showActiveBanner(ride);
+          else showActiveBanner({ id: rideId, guest_name: card.querySelector('.guest-name')?.textContent || '', pickup: '', dropoff: '', vehicle_type: '' });
+        } else {
+          if (status === 'rejected') stats.rejected++;
+          prependActionedCard({
+            id:         rideId,
+            guest_name: card.querySelector('.guest-name')?.textContent,
+            pickup:     card.querySelectorAll('.route-point')[0]?.querySelector('span:last-child')?.textContent,
+            dropoff:    card.querySelectorAll('.route-point')[1]?.querySelector('span:last-child')?.textContent
+          }, status);
+        }
+
         updateStats();
-
-        showToast(`Ride #${rideId} marked as ${status.replace('_', ' ')} ✓`);
+        showToast(`Ride #${rideId} → ${status.replace('_', ' ')} ✓`);
         toggleEmpties();
 
       } catch (err) {
@@ -273,15 +342,13 @@
     function prependActionedCard(r, status) {
       const col = document.getElementById('recentCol');
       document.getElementById('recentEmpty').style.display = 'none';
-      const card = buildActionedCard(r, status);
-      col.insertBefore(card, col.firstChild);
+      col.insertBefore(buildActionedCard(r, status), col.firstChild);
       const badge = document.getElementById('recentBadge');
       badge.textContent = parseInt(badge.textContent || 0) + 1;
     }
 
     function toggleEmpties() {
-      const pending = document.getElementById('pendingCol');
-      const cards   = pending.querySelectorAll('.ride-card');
+      const cards = document.getElementById('pendingCol').querySelectorAll('.ride-card');
       document.getElementById('pendingEmpty').style.display = cards.length ? 'none' : 'flex';
     }
 
@@ -294,17 +361,21 @@
       setTimeout(() => t.remove(), 3500);
     }
 
-    // ── Load existing rides ───────────────────────────────
+    // ── Load existing rides on login ──────────────────────
     async function loadRides() {
       try {
-        const res  = await fetch(`${BACKEND}/api/vendor/rides`, {
-          headers: { 'x-vendor-token': token }
-        });
+        const res = await fetch(`${BACKEND}/api/vendor/rides`, { headers: { 'x-vendor-token': token } });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const { pending, recent } = await res.json();
+        const { active, pending, recent } = await res.json();
 
         const pendingCol = document.getElementById('pendingCol');
         const recentCol  = document.getElementById('recentCol');
+
+        // Active ride banner
+        if (active && active.length > 0) {
+          showActiveBanner(active[0]);
+          stats.accepted = 1;
+        }
 
         if (pending.length > 0) {
           document.getElementById('pendingEmpty').style.display = 'none';
@@ -316,13 +387,12 @@
           document.getElementById('recentEmpty').style.display = 'none';
           recent.forEach(r => {
             recentCol.appendChild(buildActionedCard(r, r.status));
-            if (r.status === 'accepted') stats.accepted++;
-            else if (r.status === 'rejected') stats.rejected++;
+            if (r.status === 'rejected') stats.rejected++;
           });
           document.getElementById('recentBadge').textContent = recent.length;
         }
 
-        stats.total = pending.length + recent.length;
+        stats.total = (active?.length || 0) + pending.length + recent.length;
         updateStats();
 
       } catch (err) {
@@ -330,20 +400,22 @@
       }
     }
 
-    // ── HTTP fallback poll (runs until Socket.io authenticates) ──────────────
-    // Merges any pending rides not already displayed into the Incoming column.
-    // Stops the moment vendor_auth comes back ok — Socket.io takes over from there.
+    // ── HTTP fallback poll ────────────────────────────────
     function startPolling() {
       if (pollTimer) return;
       pollTimer = setInterval(async () => {
         if (socketLive) { clearInterval(pollTimer); pollTimer = null; return; }
         try {
-          const res = await fetch(`${BACKEND}/api/vendor/rides`, {
-            headers: { 'x-vendor-token': token }
-          });
+          const res = await fetch(`${BACKEND}/api/vendor/rides`, { headers: { 'x-vendor-token': token } });
           if (!res.ok) return;
-          const { pending } = await res.json();
+          const { active, pending } = await res.json();
           const col = document.getElementById('pendingCol');
+
+          // Sync active banner
+          if (active && active.length > 0 && !activeRideId) showActiveBanner(active[0]);
+          else if ((!active || active.length === 0) && activeRideId) clearActiveBanner();
+
+          // Merge new pending cards
           let added = 0;
           pending.forEach(r => {
             if (!col.querySelector(`[data-id="${r.id}"]`)) {
@@ -358,21 +430,16 @@
             updateStats();
           }
         } catch (_) {}
-      }, 6000);   // every 6 s while not yet live
+      }, 6000);
     }
 
-    function stopPolling() {
-      clearInterval(pollTimer);
-      pollTimer = null;
-    }
+    function stopPolling() { clearInterval(pollTimer); pollTimer = null; }
 
     // ── Socket.io ─────────────────────────────────────────
     function connectSocket() {
       socket = io(BACKEND, { transports: ['websocket', 'polling'] });
 
-      socket.on('connect', () => {
-        socket.emit('join_vendor', token);
-      });
+      socket.on('connect', () => { socket.emit('join_vendor', token); });
 
       socket.on('vendor_auth', ({ ok }) => {
         if (ok) {
@@ -383,27 +450,37 @@
         }
       });
 
-      // New ride from RabbitMQ consumer
       socket.on('new_ride', (booking) => {
         const col = document.getElementById('pendingCol');
-        // Don't add if already displayed
         if (col.querySelector(`[data-id="${booking.id}"]`)) return;
-
         document.getElementById('pendingEmpty').style.display = 'none';
         col.prepend(buildPendingCard(booking));
-        stats.pending++;
-        stats.total++;
+        stats.pending++; stats.total++;
         updateStats();
-        showToast(`🚖 New ride request — #${booking.id} from ${booking.guest_name}`);
+        showToast(`🚖 New ride — #${booking.id} from ${booking.guest_name}`);
       });
 
-      // Another vendor session actioned a ride — keep in sync
-      socket.on('ride_actioned', ({ id, status }) => {
+      // Ride actioned by another session (or rider cancel)
+      socket.on('ride_actioned', ({ id, status, ride }) => {
         const card = document.getElementById('pendingCol').querySelector(`[data-id="${id}"]`);
         if (card) {
           card.classList.add('fade-out');
           card.addEventListener('animationend', () => { card.remove(); toggleEmpties(); }, { once: true });
           stats.pending = Math.max(0, stats.pending - 1);
+          updateStats();
+        }
+        if (status === 'accepted' && ride && !activeRideId) {
+          stats.accepted++;
+          showActiveBanner(ride);
+          updateStats();
+        }
+      });
+
+      // Driver ended the ride
+      socket.on('ride_ended', ({ id }) => {
+        if (String(id) === String(activeRideId)) {
+          clearActiveBanner();
+          stats.accepted = Math.max(0, stats.accepted - 1);
           updateStats();
         }
       });
@@ -412,7 +489,7 @@
         socketLive = false;
         document.getElementById('rtDot').classList.remove('live');
         document.getElementById('rtLabel').textContent = 'Reconnecting…';
-        startPolling();   // resume HTTP fallback while socket reconnects
+        startPolling();
       });
     }
 
@@ -420,32 +497,23 @@
     async function doLogin() {
       const pwd = document.getElementById('passwordInput').value.trim();
       if (!pwd) return;
-
-      // Validate token by trying to fetch rides
       try {
-        const res = await fetch(`${BACKEND}/api/vendor/rides`, {
-          headers: { 'x-vendor-token': pwd }
-        });
+        const res = await fetch(`${BACKEND}/api/vendor/rides`, { headers: { 'x-vendor-token': pwd } });
         if (res.status === 401) {
           document.getElementById('loginError').textContent = 'Incorrect password — try again.';
-          document.getElementById('loginError').style.display = 'block';
-          return;
+          document.getElementById('loginError').style.display = 'block'; return;
         }
         if (!res.ok) {
           document.getElementById('loginError').textContent = `Server error (${res.status}) — check Render deployment.`;
-          document.getElementById('loginError').style.display = 'block';
-          return;
+          document.getElementById('loginError').style.display = 'block'; return;
         }
-
         token = pwd;
         sessionStorage.setItem('vendorToken', token);
-
         document.getElementById('loginScreen').style.display = 'none';
         document.getElementById('dashboard').style.display   = 'flex';
-
         loadRides();
         connectSocket();
-        startPolling();   // HTTP fallback until socket goes live
+        startPolling();
       } catch (err) {
         document.getElementById('loginError').textContent = 'Connection failed — is the server running?';
         document.getElementById('loginError').style.display = 'block';
@@ -453,27 +521,20 @@
     }
 
     document.getElementById('loginBtn').addEventListener('click', doLogin);
-    document.getElementById('passwordInput').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') doLogin();
-    });
+    document.getElementById('passwordInput').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 
-    // ── Logout ────────────────────────────────────────────
     document.getElementById('logoutBtn').addEventListener('click', () => {
       sessionStorage.removeItem('vendorToken');
       if (socket) socket.disconnect();
-      stopPolling();
-      socketLive = false;
+      stopPolling(); socketLive = false; activeRideId = null;
       document.getElementById('dashboard').style.display   = 'none';
       document.getElementById('loginScreen').style.display = 'flex';
       document.getElementById('passwordInput').value = '';
+      clearActiveBanner();
     });
 
-    // ── Auto-login if token stored ────────────────────────
     const stored = sessionStorage.getItem('vendorToken');
-    if (stored) {
-      document.getElementById('passwordInput').value = stored;
-      doLogin();
-    }
+    if (stored) { document.getElementById('passwordInput').value = stored; doLogin(); }
   </script>
 </body>
 </html>

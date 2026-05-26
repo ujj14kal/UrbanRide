@@ -32,6 +32,7 @@ const bookingRoutes = require('./booking');
 const invoiceRouter = require('./invoiceRouter');
 const socketModule  = require('./socket');
 const { statusCache, bookingCache, getStats } = require('./cache');
+const { sendRideCompleteEmail } = require('./mailer');
 
 // ── App + HTTP server ─────────────────────────────────────────────────────────
 const app    = express();
@@ -176,21 +177,32 @@ app.post('/directions', async (req, res) => {
 });
 
 // ── Vendor Console API ────────────────────────────────────────────────────────
+
+// GET /api/vendor/rides
+// Returns three buckets:
+//   active  — the one ride currently in progress (status = accepted)
+//   pending — rides awaiting a decision
+//   recent  — rejected / completed / cancelled (last 30)
 app.get('/api/vendor/rides', vendorAuth, async (req, res) => {
   try {
+    const [active] = await db.query(
+      "SELECT * FROM rides WHERE status = 'accepted' ORDER BY id DESC LIMIT 1"
+    );
     const [pending] = await db.query(
       "SELECT * FROM rides WHERE status IN ('pending','open_market') ORDER BY id DESC"
     );
     const [recent] = await db.query(
-      "SELECT * FROM rides WHERE status IN ('accepted','rejected') ORDER BY id DESC LIMIT 30"
+      "SELECT * FROM rides WHERE status IN ('rejected','completed','cancelled') ORDER BY id DESC LIMIT 30"
     );
-    res.json({ pending, recent });
+    res.json({ active, pending, recent });
   } catch (err) {
     logger.error({ event: 'vendor_rides_error', message: err.message });
     res.status(500).json({ error: 'Server error' });
   }
 });
 
+// POST /api/vendor/respond/:id — accept / reject / open_market
+// Accepting is blocked when a ride is already in progress (status = accepted).
 app.post('/api/vendor/respond/:id', vendorAuth, async (req, res) => {
   const { action } = req.body;
   const { id }     = req.params;
@@ -199,18 +211,71 @@ app.post('/api/vendor/respond/:id', vendorAuth, async (req, res) => {
   const newStatus = statusMap[action];
   if (!newStatus) return res.status(400).json({ error: 'Invalid action' });
 
+  // One-active-ride enforcement — only for accept
+  if (newStatus === 'accepted') {
+    const [active] = await db.query(
+      "SELECT id FROM rides WHERE status = 'accepted' LIMIT 1"
+    );
+    if (active.length > 0) {
+      return res.status(409).json({
+        error: `Cannot accept — Ride #${active[0].id} is still in progress. End it first.`
+      });
+    }
+  }
+
   try {
     await db.query('UPDATE rides SET status = ? WHERE id = ?', [newStatus, id]);
     statusCache.del(`status_${id}`);
     bookingCache.del(`booking_${id}`);
 
+    // Fetch full ride data so vendor_room gets it for the active-ride banner
+    const [rows] = await db.query('SELECT * FROM rides WHERE id = ?', [id]);
+    const ride   = rows[0] || null;
+
     io.to(`booking_${id}`).emit('status_update', { bookingId: id, status: newStatus });
-    io.to('vendor_room').emit('ride_actioned', { id, status: newStatus });
+    io.to('vendor_room').emit('ride_actioned',   { id, status: newStatus, ride });
 
     logger.info({ event: 'vendor_respond', rideId: id, status: newStatus });
     res.json({ success: true, status: newStatus });
   } catch (err) {
     logger.error({ event: 'vendor_respond_error', message: err.message });
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// POST /api/vendor/end-ride/:id — driver marks ride as completed
+//   • Sets status = 'completed'
+//   • Sends invoice email to rider (non-blocking)
+//   • Pushes real-time events to rider + vendor console
+app.post('/api/vendor/end-ride/:id', vendorAuth, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const [rows] = await db.query(
+      "SELECT * FROM rides WHERE id = ? AND status = 'accepted'", [id]
+    );
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'No active ride found with that ID.' });
+    }
+    const ride = rows[0];
+
+    await db.query("UPDATE rides SET status = 'completed' WHERE id = ?", [id]);
+    statusCache.del(`status_${id}`);
+    bookingCache.del(`booking_${id}`);
+
+    // Rider dashboard: show completed status live
+    io.to(`booking_${id}`).emit('status_update', { bookingId: id, status: 'completed' });
+    // Vendor console: clear active-ride banner
+    io.to('vendor_room').emit('ride_ended', { id, status: 'completed' });
+
+    // Email invoice — fire-and-forget, never blocks the HTTP response
+    sendRideCompleteEmail(ride).catch(err =>
+      logger.error({ event: 'invoice_email_error', rideId: id, message: err.message })
+    );
+
+    logger.info({ event: 'ride_ended', rideId: id, email: ride.email });
+    res.json({ success: true, status: 'completed' });
+  } catch (err) {
+    logger.error({ event: 'end_ride_error', message: err.message });
     res.status(500).json({ error: 'Server error' });
   }
 });

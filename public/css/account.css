@@ -317,6 +317,8 @@ body {
 .live-dot.accepted   { background: var(--green); box-shadow: 0 0 0 3px rgba(22,163,74,.25);  animation: glow-green 2s infinite; }
 .live-dot.rejected   { background: var(--red); }
 .live-dot.open_market { background: var(--blue); }
+.live-dot.completed  { background: var(--gray-400); }
+.live-dot.cancelled  { background: var(--gray-400); }
 
 @keyframes glow-amber {
   0%,100% { box-shadow: 0 0 0 3px rgba(245,158,11,.25); }
@@ -363,6 +365,7 @@ body {
 .status-pill.rejected   { background: var(--red-bg);   color: #991b1b; }
 .status-pill.open_market { background: var(--blue-bg);  color: #1e40af; }
 .status-pill.cancelled  { background: var(--gray-100);  color: var(--gray-600); }
+.status-pill.completed  { background: #f0fdf4;          color: #166534; }
 
 .route-block {
   background: var(--gray-50);
