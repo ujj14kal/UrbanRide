@@ -3,162 +3,200 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>UrbanRide</title>
+  <title>UrbanRide — Corporate Cab Booking</title>
   <link rel="stylesheet" href="/css/style.css">
-  <link rel="icon" type="image/png" href="/images/ur.png"> 
+  <link rel="icon" type="image/png" href="/images/ur.png">
+  <meta name="description" content="UrbanRide — your trusted corporate ride partner. Book rides anytime, anywhere.">
 </head>
 
 <body>
-  
+
+  <!-- ── Navbar ──────────────────────────────────────────── -->
   <header id="head">
     <h1>UrbanRide</h1>
     <nav>
       <ul>
-        <li><a href="/html/account.html">Your account</a></li>
+        <li><a href="/html/account.html">Account</a></li>
         <li><a id="log" href="/html/booking.html">Book Now</a></li>
       </ul>
     </nav>
   </header>
 
-
-
-  
+  <!-- ── Hero ────────────────────────────────────────────── -->
   <div id="hello">
     <main>
       <div id="intro">
-        <h1 style="font-size: 40px;">Your business ride partner.<br>Anytime. Anywhere.</h1>
+        <h1>Your business ride partner.<br>Anytime. Anywhere.</h1>
       </div>
-
-      <img id="img1" src="https://cn-geo1.uber.com/image-proc/crop/resizecrop/udam/format=auto/width=1344/height=896/srcb64=aHR0cHM6Ly90Yi1zdGF0aWMudWJlci5jb20vcHJvZC91ZGFtLWFzc2V0cy9hM2NmODU2NC1lMmE2LTQxOGMtYjliMC02NWRkMjg1YzEwMGIuanBn" alt="UrbanRide Image">
+      <a id="hero-cta" href="/html/booking.html">Book a Ride →</a>
     </main>
   </div>
 
+  <!-- ── Stats strip ─────────────────────────────────────── -->
+  <section class="stats-strip" aria-label="UrbanRide stats">
+    <div class="stat-item">
+      <span class="stat-number" data-target="50000">0</span>
+      <span class="stat-label">Rides Completed</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-number" data-target="200">0</span>
+      <span class="stat-label">Cities Served</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-number" data-target="500">0</span>
+      <span class="stat-label">Corporate Clients</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-number" data-target="99">0</span>
+      <span class="stat-label">% On-Time Rate</span>
+    </div>
+  </section>
 
-  
-
-    <div class="testimonial-carousel">
+  <!-- ── Testimonials ─────────────────────────────────────── -->
+  <div class="testimonial-carousel" aria-label="Client testimonials">
     <div class="testimonial active">
-      <img src="https://i.pinimg.com/736x/3c/17/cc/3c17ccb25d186e2dfc74aa764d34d907.jpg" alt="Google Logo" />
-      <p>“UrbanRide ensures our teams reach meetings on time, everytime.”</p>
+      <img src="https://i.pinimg.com/736x/3c/17/cc/3c17ccb25d186e2dfc74aa764d34d907.jpg" alt="Google" />
+      <p>"UrbanRide ensures our teams reach meetings on time, every time."</p>
       <span>— Google</span>
     </div>
-
     <div class="testimonial">
-      <img src="https://wallpapers.com/images/high/amazon-logo-black-background-xb9pdemosnjfz9ej.png" alt="Amazon Logo" />
-      <p>“Quick pickups and smooth routes. UrbanRide keeps our logistics flowing.”</p>
+      <img src="https://wallpapers.com/images/high/amazon-logo-black-background-xb9pdemosnjfz9ej.png" alt="Amazon" />
+      <p>"Quick pickups and smooth routes. UrbanRide keeps our logistics flowing."</p>
       <span>— Amazon</span>
     </div>
-
     <div class="testimonial">
-      <img src="https://toppng.com/uploads/preview/microsoft-logo-hd-11563140791lh7zg8bhmr.png" alt="Microsoft Logo" />
-      <p>“UrbanRide is the most dependable partner for employee transport.”</p>
+      <img src="https://toppng.com/uploads/preview/microsoft-logo-hd-11563140791lh7zg8bhmr.png" alt="Microsoft" />
+      <p>"UrbanRide is the most dependable partner for employee transport."</p>
       <span>— Microsoft</span>
     </div>
-
     <div class="testimonial">
-      <img src="https://toppng.com/uploads/preview/deloitte-logo-deloitte-11563208578meecmuosyp.png" alt="Deloitte Logo" />
-      <p>“Reliable, safe, and timely — perfect for corporate travel.”</p>
+      <img src="https://toppng.com/uploads/preview/deloitte-logo-deloitte-11563208578meecmuosyp.png" alt="Deloitte" />
+      <p>"Reliable, safe, and timely — perfect for corporate travel."</p>
       <span>— Deloitte</span>
     </div>
-
     <div class="testimonial">
-      <img src="https://toppng.com/uploads/preview/hurry-nowmobikwik-mobikwik-logo-11563030612epsxeczdug.png" alt="Mobikwik Logo" />
-      <p>“Seamless integration of rides with payments — UrbanRide is the future.”</p>
+      <img src="https://toppng.com/uploads/preview/hurry-nowmobikwik-mobikwik-logo-11563030612epsxeczdug.png" alt="Mobikwik" />
+      <p>"Seamless rides with real-time tracking — UrbanRide is the future."</p>
       <span>— Mobikwik</span>
     </div>
   </div>
 
+  <!-- ── Feature cards ────────────────────────────────────── -->
+  <section class="features-wrapper" aria-label="Features">
+    <h2 class="features-heading">Travel your way with UrbanRide</h2>
+    <div class="features-section">
+      <div class="feature-card">
+        <img src="https://tb-static.uber.com/prod/udam-assets/850e6b6d-a29e-4960-bcab-46de99547d24.svg" alt="Ride options">
+        <h3>Ride options</h3>
+        <p>Sedan, SUV, Luxury, or Tempo Traveller — there's a ride for every need.</p>
+      </div>
+      <div class="feature-card">
+        <img src="https://cn-geo1.uber.com/image-proc/crop/resizecrop/udam/format=auto/width=1152/height=1152/srcb64=aHR0cHM6Ly90Yi1zdGF0aWMudWJlci5jb20vcHJvZC91ZGFtLWFzc2V0cy83NmJhZjFlYS0zODVhLTQwOGMtODQ2Yi01OTIxMTA4NjE5NmMucG5n" alt="700+ airports">
+        <h3>700+ airports</h3>
+        <p>Schedule a ride to or from major airports — stress-free every time.</p>
+      </div>
+      <div class="feature-card">
+        <img src="https://cn-geo1.uber.com/image-proc/crop/resizecrop/udam/format=auto/width=1152/height=1152/srcb64=aHR0cHM6Ly90Yi1zdGF0aWMudWJlci5jb20vcHJvZC91ZGFtLWFzc2V0cy8xODM0ZTZmZC0zM2UzLTRjOTUtYWQ3YS1mNDg0YThjODEyZDcuanBn" alt="15,000+ cities">
+        <h3>15,000+ cities</h3>
+        <p>Available in thousands of cities worldwide so you're never stranded.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Business section ─────────────────────────────────── -->
+  <section class="business-section" aria-label="Business solutions">
+    <div class="business-container">
+      <div class="business-text">
+        <h2>Built for the enterprise. Loved by teams.</h2>
+        <p>Discover why 500+ companies trust UrbanRide for corporate travel.</p>
+        <ul>
+          <li>Seamless rides for every employee, every shift</li>
+          <li>Centralised billing and expense management</li>
+          <li>Reliable airport transfers for clients &amp; executives</li>
+          <li>24/7 customer support for business accounts</li>
+          <li>Customisable ride policies and travel controls</li>
+          <li>Real-time vendor confirmations via Telegram</li>
+        </ul>
+      </div>
+      <div class="business-image">
+        <img src="/images/urbanride_image.png" alt="UrbanRide for Business">
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Footer ───────────────────────────────────────────── -->
+  <footer class="urbanride-footer">
+    <div class="footer-container">
+      <div class="footer-column">
+        <h4>Company</h4>
+        <ul>
+          <li><a href="#">About us</a></li>
+          <li><a href="#">Our services</a></li>
+          <li><a href="#">Blog</a></li>
+          <li><a href="#">Careers</a></li>
+        </ul>
+      </div>
+      <div class="footer-column">
+        <h4>Products</h4>
+        <ul>
+          <li><a href="#">Ride</a></li>
+          <li><a href="#">Drive</a></li>
+          <li><a href="#">Urban Auto</a></li>
+          <li><a href="#">Urban Moto</a></li>
+        </ul>
+      </div>
+      <div class="footer-column">
+        <h4>Travel</h4>
+        <ul>
+          <li><a href="#">Airports</a></li>
+          <li><a href="#">Cities</a></li>
+        </ul>
+      </div>
+      <div class="footer-column">
+        <h4>Support</h4>
+        <ul>
+          <li><a href="#">Help Center</a></li>
+          <li><a href="#">Contact us</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p class="copyright">©2025 UrbanRide Technologies Inc.</p>
+      <span class="footer-brand">UrbanRide</span>
+    </div>
+  </footer>
+
+  <!-- ── Scripts ──────────────────────────────────────────── -->
   <script src="/js/node.js"></script>
+  <script>
+    // ── Animated stat counters ────────────────────────────
+    function animateCounter(el) {
+      const target = parseInt(el.dataset.target, 10);
+      const duration = 1800;
+      const step = target / (duration / 16);
+      let current = 0;
 
-<section class="features-wrapper">
-  <h2 class="features-heading">Use UrbanRide to help you travel your way</h2>
+      const format = n => n >= 1000 ? (n / 1000).toFixed(0) + 'K+' : n + (n === 99 ? '%' : '+');
 
-  <div class="features-section">
-    <div class="feature-card">
-      <img src="https://tb-static.uber.com/prod/udam-assets/850e6b6d-a29e-4960-bcab-46de99547d24.svg" alt="Ride options">
-      <h3>Ride options</h3>
-      <p>There’s more than one way to move with UrbanRide, no matter where you are or where you’re headed next.</p>
-    </div>
-    <div class="feature-card">
-      <img src="https://cn-geo1.uber.com/image-proc/crop/resizecrop/udam/format=auto/width=1152/height=1152/srcb64=aHR0cHM6Ly90Yi1zdGF0aWMudWJlci5jb20vcHJvZC91ZGFtLWFzc2V0cy83NmJhZjFlYS0zODVhLTQwOGMtODQ2Yi01OTIxMTA4NjE5NmMucG5n" alt="700+ airports">
-      <h3>700+ airports</h3>
-      <p>You can request a ride to and from most major airports. Schedule a ride to the airport for one less thing to worry about.</p>
-    </div>
-    <div class="feature-card">
-      <img src="https://cn-geo1.uber.com/image-proc/crop/resizecrop/udam/format=auto/width=1152/height=1152/srcb64=aHR0cHM6Ly90Yi1zdGF0aWMudWJlci5jb20vcHJvZC91ZGFtLWFzc2V0cy8xODM0ZTZmZC0zM2UzLTRjOTUtYWQ3YS1mNDg0YThjODEyZDcuanBn" alt="15,000+ cities">
-      <h3>15,000+ cities</h3>
-      <p>The app is available in thousands of cities worldwide, so you can request a ride even when you’re far from home.</p>
-    </div>
-  </div>
-</section>
+      const timer = setInterval(() => {
+        current = Math.min(current + step, target);
+        el.textContent = format(Math.floor(current));
+        if (current >= target) clearInterval(timer);
+      }, 16);
+    }
 
-<section class="business-section">
-  <div class="business-container">
-    <div class="business-text">
-      <h2>Looking for business solutions?</h2>
-      <p>Discover the benefits of choosing <strong>UrbanRide</strong> for your corporate travel needs:</p>
-      <ul>
-        <li>✓ Seamless ride for employees</li>
-        <li>✓ Centralized billing and expense management</li>
-        <li>✓ Reliable airport transfers for clients and executives</li>
-        <li>✓ 24/7 customer support for business accounts</li>
-        <li>✓ Customizable ride policies and travel controls</li>
-      </ul>
-    </div>
-    <div class="business-image">
-      <img src="/images/urbanride_image.png" alt="UrbanRide for Business">
-    </div>
-  </div>
-</section>
+    // Trigger counters when strip is in view
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.querySelectorAll('[data-target]').forEach(animateCounter);
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.3 });
 
-
-<footer class="urbanride-footer">
-  <div class="footer-container">
-    <div class="footer-column">
-      <h4>Company</h4>
-      <ul>
-        <li><a href="#">About us</a></li>
-        <li><a href="#">Our services</a></li>
-        <li><a href="#">Blog</a></li>
-        <li><a href="#">Careers</a></li>
-      </ul>
-    </div>
-
-    <div class="footer-column">
-      <h4>Products</h4>
-      <ul>
-        <li><a href="#">Ride</a></li>
-        <li><a href="#">Drive</a></li>
-        <li><a href="#">Urban Auto</a></li> 
-        <li><a href="#">Urban Moto</a></li>
-      </ul>
-    </div>
-
-    <div class="footer-column">
-      <h4>Travel</h4>
-      <ul>
-        <li><a href="#">Airports</a></li>
-        <li><a href="#">Cities</a></li>
-      </ul>
-    </div>
-
-    <div class="footer-column">
-      <h4>Support</h4>
-      <ul>
-        <li><a href="#">Help Center</a></li>
-        <li><a href="#">Contact us</a></li>
-      </ul>
-    </div>
-  </div>
-
-  <div class="footer-bottom">
-    <p class="copyright">©2025 UrbanRide technologies Inc.</p>
-    <span class="footer-brand">UrbanRide</span>
-  </div>
-</footer>
-
-
-
-
+    const strip = document.querySelector('.stats-strip');
+    if (strip) observer.observe(strip);
+  </script>
 </body>
 </html>

@@ -1,372 +1,304 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <title>Booking Confirmation</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" href="/css/confirmation.css" />
-    <link rel="stylesheet" href="/css/style.css" />
-    <link rel="icon" type="image/png" href="/images/ur.png" />
-    <style>
-        #map {
-            width: 100%;
-            height: 400px;
-            margin: 20px 0;
-            margin-left: 0px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        }
-        #fare-estimate {
-            font-weight: bold;
-            margin-bottom: 10px;
-        }
-        #cancelBtn {
-            background-color: red;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-    </style>
-
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBGvVzJu_zA6-ngh8zYuXKABa_CPS6p9B4&libraries=places"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Booking Confirmation — UrbanRide</title>
+  <link rel="stylesheet" href="/css/confirmation.css">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" type="image/png" href="/images/ur.png">
+  <!-- Google Maps (loaded synchronously so DirectionsService is ready) -->
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBGvVzJu_zA6-ngh8zYuXKABa_CPS6p9B4&libraries=places"></script>
+  <!-- Socket.io client — real-time status push (replaces setInterval polling) -->
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js" crossorigin="anonymous"></script>
 </head>
 
 <body>
-    <header class="navbar">
-        <div class="logo">UrbanRide</div>
-        <nav>
-            <a href="/html/index.html">Home</a>
-            <a href="/html/booking.html" class="book-now">Book Another</a>
-        </nav>
-    </header>
+  <!-- ── Navbar ─────────────────────────────────────────── -->
+  <header class="navbar">
+    <div class="logo">UrbanRide</div>
+    <nav>
+      <a href="/html/index.html">Home</a>
+      <a href="/html/booking.html" class="book-now">Book Another</a>
+    </nav>
+  </header>
 
-    <main class="confirmation-container">
-        <h1>Your booking is partially confirmed!</h1>
-        <p>Please refer to the section below the map to check the vendor’s response to your booking request.
-            If the vendor declines your request,
-            you may proceed to make a new booking with an alternative vendor.</p>
-        <p id="info">Fetching booking details...</p>
-        <div id="map"></div>
-        <div id="fare-estimate"></div>
+  <!-- ── Main content ───────────────────────────────────── -->
+  <main class="confirmation-container">
+    <h1>Booking Received ✓</h1>
+    <p>
+      Your ride request is with the vendor. Watch the status below — it updates
+      <strong>instantly</strong> via WebSocket the moment they respond.
+    </p>
 
-        <div id="vendor-status-wrapper" style="margin-top: 20px; text-align: center;">
-            <strong>Vendor Status: </strong>
-            <span id="vendor-status-badge" style="padding: 6px 12px; border-radius: 4px; background-color: #ccc; color: #333;">
-                Pending
-            </span>
-        </div>
+    <!-- Booking info card -->
+    <div id="info">Fetching booking details…</div>
 
-        
+    <!-- Map -->
+    <div id="map"></div>
 
+    <!-- Fare estimate -->
+    <div id="fare-estimate"></div>
 
-        <audio id="accept-sound" src="/audio/correct-356013.mp3" preload="auto"></audio>
-        <audio id="reject-sound" src="/audio/denied-sound-39708.mp3" preload="auto"></audio>
+    <!-- Vendor status card -->
+    <div class="status-card">
+      <div class="status-label">Vendor Response</div>
 
-        <button id="cancelBtn">Cancel Ride</button>
-        <a id="downloadInvoice" href="#" style="display: none;" download>Download Invoice</a>
-</main>
-        
-    
+      <!-- Real-time connection indicator -->
+      <div class="rt-indicator">
+        <span class="rt-dot" id="rtDot"></span>
+        <span id="rtLabel">Connecting…</span>
+      </div>
 
-    <footer class="urbanride-footer">
-        <div class="footer-container">
-            <div class="footer-column">
-                <h4>Company</h4>
-                <ul>
-                    <li><a href="#">About us</a></li>
-                    <li><a href="#">Our services</a></li>
-                    <li><a href="#">Blog</a></li>
-                    <li><a href="#">Careers</a></li>
-                </ul>
-            </div>
-            <div class="footer-column">
-                <h4>Products</h4>
-                <ul>
-                    <li><a href="#">Ride</a></li>
-                    <li><a href="#">Drive</a></li>
-                    <li><a href="#">Urban Auto</a></li>
-                    <li><a href="#">Urban Moto</a></li>
-                </ul>
-            </div>
-            <div class="footer-column">
-                <h4>Travel</h4>
-                <ul>
-                    <li><a href="#">Airports</a></li>
-                    <li><a href="#">Cities</a></li>
-                </ul>
-            </div>
-            <div class="footer-column">
-                <h4>Support</h4>
-                <ul>
-                    <li><a href="#">Help Center</a></li>
-                    <li><a href="#">Contact us</a></li>
-                </ul>
-            </div>
-        </div>
+      <div>
+        <span id="vendor-status-badge">Pending</span>
+      </div>
+    </div>
 
-        <div class="footer-bottom">
-            <p class="copyright">©2025 UrbanRide technologies Inc.</p>
-            <span class="footer-brand">UrbanRide</span>
-        </div>
-    </footer>
+    <!-- Audio cues -->
+    <audio id="accept-sound" src="/audio/correct-356013.mp3"  preload="auto"></audio>
+    <audio id="reject-sound" src="/audio/denied-sound-39708.mp3" preload="auto"></audio>
 
-    <script>
-        // Define your Render backend URL here
-        const RENDER_BACKEND_URL = 'https://urbanride.onrender.com';
+    <!-- Action buttons -->
+    <div class="action-row">
+      <button id="cancelBtn">Cancel Ride</button>
+      <a id="downloadInvoice" href="#" download>⬇ Download Invoice</a>
+    </div>
+  </main>
 
-        let map, directionsService, directionsRenderer; // Declare these globally if needed by other functions
+  <!-- ── Footer ─────────────────────────────────────────── -->
+  <footer class="urbanride-footer">
+    <div class="footer-container">
+      <div class="footer-column">
+        <h4>Company</h4>
+        <ul>
+          <li><a href="#">About us</a></li>
+          <li><a href="#">Our services</a></li>
+          <li><a href="#">Blog</a></li>
+          <li><a href="#">Careers</a></li>
+        </ul>
+      </div>
+      <div class="footer-column">
+        <h4>Products</h4>
+        <ul>
+          <li><a href="#">Ride</a></li>
+          <li><a href="#">Drive</a></li>
+          <li><a href="#">Urban Auto</a></li>
+          <li><a href="#">Urban Moto</a></li>
+        </ul>
+      </div>
+      <div class="footer-column">
+        <h4>Travel</h4>
+        <ul>
+          <li><a href="#">Airports</a></li>
+          <li><a href="#">Cities</a></li>
+        </ul>
+      </div>
+      <div class="footer-column">
+        <h4>Support</h4>
+        <ul>
+          <li><a href="#">Help Center</a></li>
+          <li><a href="#">Contact us</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p class="copyright">©2025 UrbanRide Technologies Inc.</p>
+      <span class="footer-brand">UrbanRide</span>
+    </div>
+  </footer>
 
-        // Function to initialize map and show route
-        function showGoogleRoute(pickup, dropoff) {
-            directionsService = new google.maps.DirectionsService();
-            directionsRenderer = new google.maps.DirectionsRenderer({ suppressMarkers: false });
+  <!-- ── App script ──────────────────────────────────────── -->
+  <script>
+    const BACKEND       = 'https://urbanride.onrender.com';
+    const bookingId     = new URLSearchParams(window.location.search).get('booking_id');
+    const statusBadge   = document.getElementById('vendor-status-badge');
+    const acceptSound   = document.getElementById('accept-sound');
+    const rejectSound   = document.getElementById('reject-sound');
+    const invoiceLink   = document.getElementById('downloadInvoice');
+    const rtDot         = document.getElementById('rtDot');
+    const rtLabel       = document.getElementById('rtLabel');
+    let   previousStatus = 'pending';
 
-            const darkMapStyle = [
-                { elementType: "geometry", stylers: [{ color: "#212121" }] },
-                { elementType: "labels.icon", stylers: [{ visibility: "off" }] },
-                { elementType: "labels.text.fill", stylers: [{ color: "#757575" }] },
-                { elementType: "labels.text.stroke", stylers: [{ color: "#212121" }] },
-                {
-                    featureType: "administrative",
-                    elementType: "geometry",
-                    stylers: [{ color: "#757575" }]
-                },
-                {
-                    featureType: "administrative.country",
-                    elementType: "labels.text.fill",
-                    stylers: [{ color: "#9e9e9e" }]
-                },
-                {
-                    featureType: "poi",
-                    elementType: "labels.text.fill",
-                    stylers: [{ color: "#bdbdbd" }]
-                },
-                {
-                    featureType: "road",
-                    elementType: "geometry",
-                    stylers: [{ color: "#383838" }]
-                },
-                {
-                    featureType: "road.arterial",
-                    elementType: "geometry",
-                    stylers: [{ color: "#4d4d4d" }]
-                },
-                {
-                    featureType: "road.highway",
-                    elementType: "geometry",
-                    stylers: [{ color: "#616161" }]
-                },
-                {
-                    featureType: "road.local",
-                    elementType: "geometry",
-                    stylers: [{ color: "#333333" }]
-                },
-                {
-                    featureType: "transit",
-                    elementType: "labels.text.fill",
-                    stylers: [{ color: "#757575" }]
-                },
-                {
-                    featureType: "water",
-                    elementType: "geometry",
-                    stylers: [{ color: "#000000" }]
-                },
-                {
-                    featureType: "water",
-                    elementType: "labels.text.fill",
-                    stylers: [{ color: "#3d3d3d" }]
-                }
-            ];
+    // ── Google Maps dark-style route ──────────────────────
+    function showGoogleRoute(pickup, dropoff) {
+      const darkStyle = [
+        { elementType: 'geometry',            stylers: [{ color: '#1a1a1a' }] },
+        { elementType: 'labels.icon',         stylers: [{ visibility: 'off' }] },
+        { elementType: 'labels.text.fill',    stylers: [{ color: '#757575' }] },
+        { elementType: 'labels.text.stroke',  stylers: [{ color: '#1a1a1a' }] },
+        { featureType: 'road',      elementType: 'geometry', stylers: [{ color: '#2d2d2d' }] },
+        { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#444' }] },
+        { featureType: 'water',     elementType: 'geometry', stylers: [{ color: '#000' }] },
+        { featureType: 'poi',       stylers: [{ visibility: 'off' }] }
+      ];
 
-            map = new google.maps.Map(document.getElementById("map"), {
-                zoom: 7,
-                center: { lat: 28.6139, lng: 77.2090 }, // Default center, e.g., New Delhi
-                styles: darkMapStyle
-            });
+      const map = new google.maps.Map(document.getElementById('map'), {
+        zoom: 11,
+        center: { lat: 28.6139, lng: 77.2090 },
+        styles: darkStyle,
+        disableDefaultUI: false
+      });
 
-            directionsRenderer.setMap(map);
+      new google.maps.TrafficLayer().setMap(map);
 
-            const trafficLayer = new google.maps.TrafficLayer();
-            trafficLayer.setMap(map);
+      const svc      = new google.maps.DirectionsService();
+      const renderer = new google.maps.DirectionsRenderer({ suppressMarkers: false });
+      renderer.setMap(map);
 
-            const legend = document.createElement('div');
-            legend.innerHTML = `
-                <div style="background:#1f1f1f; padding:10px; border-radius:5px; color: #fff; font-size: 14px;">
-                    <strong>Legend:</strong><br>
-                    <span style="color:green;">Green</span>: Free Flow<br>
-                    <span style="color:orange;">Orange</span>: Moderate<br>
-                    <span style="color:red;">Red</span>: Heavy
-                </div>`;
-            map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(legend);
-
-            directionsService.route({
-                origin: pickup,
-                destination: dropoff,
-                travelMode: google.maps.TravelMode.DRIVING,
-                drivingOptions: {
-                    departureTime: new Date(),
-                    trafficModel: 'bestguess'
-                }
-            }, (response, status) => {
-                if (status === 'OK') {
-                    directionsRenderer.setDirections(response);
-                    const leg = response.routes[0].legs[0];
-                    const distance = leg.distance.text;
-                    const duration = leg.duration_in_traffic?.text || leg.duration.text;
-                    const estimatedFare = estimateFare(leg.distance.value);
-
-                    document.getElementById("fare-estimate").innerText =
-                        `Distance: ${distance} | Time: ${duration} | Estimated Fare: ₹${estimatedFare}`;
-                } else {
-                    console.error("Google Maps Directions API error:", status);
-                    alert("Could not display route. Reason: " + status + ". Please check your pickup/dropoff locations.");
-                }
-            });
+      svc.route({
+        origin:      pickup,
+        destination: dropoff,
+        travelMode:  google.maps.TravelMode.DRIVING,
+        drivingOptions: { departureTime: new Date(), trafficModel: 'bestguess' }
+      }, (response, status) => {
+        if (status !== 'OK') {
+          console.error('Directions error:', status);
+          return;
         }
+        renderer.setDirections(response);
+        const leg      = response.routes[0].legs[0];
+        const distM    = leg.distance.value;
+        const fare     = Math.round(50 + (distM / 1000) * 12);
+        const duration = leg.duration_in_traffic?.text || leg.duration.text;
 
-        function estimateFare(distanceMeters) {
-            const baseFare = 50;
-            const perKmRate = 12;
-            const distanceKm = distanceMeters / 1000;
-            return Math.round(baseFare + distanceKm * perKmRate);
+        document.getElementById('fare-estimate').textContent =
+          `📍 ${leg.distance.text}  ·  ⏱ ${duration} in traffic  ·  Est. Fare ₹${fare}`;
+      });
+    }
+
+    // ── Fetch booking details ─────────────────────────────
+    async function fetchBookingDetails() {
+      const infoEl = document.getElementById('info');
+      try {
+        const res  = await fetch(`${BACKEND}/api/bookings?id=${bookingId}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        const b    = data.bookings?.[0];
+        if (!b) { infoEl.textContent = 'Booking not found.'; return; }
+
+        infoEl.innerHTML = `
+          <strong>Booking&nbsp;ID:</strong> ${b.id}<br>
+          <strong>Guest:</strong> ${b.guest_name}<br>
+          <strong>Phone:</strong> ${b.phone}<br>
+          <strong>Pickup:</strong> ${b.pickup}<br>
+          <strong>Drop-off:</strong> ${b.dropoff}<br>
+          <strong>Vehicle:</strong> ${b.vehicle_type} &nbsp;·&nbsp; <strong>Passengers:</strong> ${b.passengers || 1}
+        `;
+        showGoogleRoute(b.pickup, b.dropoff);
+        applyStatus(b.status);    // render current DB status immediately
+      } catch (err) {
+        infoEl.textContent = `Error fetching details: ${err.message}`;
+      }
+    }
+
+    // ── Apply status to the badge UI ──────────────────────
+    function applyStatus(status) {
+      const s = (status || '').toLowerCase();
+      if (s === previousStatus) return;
+      previousStatus = s;
+
+      // Remove all state classes
+      statusBadge.className = '';
+      invoiceLink.style.display = 'none';
+
+      switch (s) {
+        case 'accepted':
+          statusBadge.textContent  = '✅ Accepted';
+          statusBadge.className    = 'accepted';
+          invoiceLink.href         = `${BACKEND}/invoice/${bookingId}`;
+          invoiceLink.style.display = 'inline-block';
+          acceptSound.play().catch(() => {});
+          break;
+
+        case 'rejected':
+          statusBadge.textContent = '❌ Rejected';
+          statusBadge.className   = 'rejected';
+          rejectSound.play().catch(() => {});
+          break;
+
+        case 'open_market':
+          statusBadge.textContent = '📤 Moved to Open Market';
+          statusBadge.className   = 'open_market';
+          break;
+
+        default:
+          statusBadge.textContent = 'Pending…';
+      }
+    }
+
+    // ── Cancel booking ────────────────────────────────────
+    document.getElementById('cancelBtn').addEventListener('click', () => {
+      if (!confirm('Are you sure you want to cancel this ride?')) return;
+      fetch(`${BACKEND}/api/bookings/${bookingId}`, { method: 'DELETE' })
+        .then(res => {
+          if (res.ok) {
+            alert('Booking cancelled.');
+            window.location.href = '/html/index.html';
+          } else {
+            alert('Failed to cancel — please try again.');
+          }
+        })
+        .catch(() => alert('Network error cancelling booking.'));
+    });
+
+    // ── Socket.io — real-time vendor status push ──────────
+    // Replaces the old setInterval polling (every 3 s) with a persistent
+    // WebSocket connection. Server emits 'status_update' the instant the
+    // vendor taps Accept / Reject / Open Market on Telegram.
+    function connectSocket() {
+      const socket = io(BACKEND, { transports: ['websocket', 'polling'] });
+
+      socket.on('connect', () => {
+        rtDot.classList.add('connected');
+        rtLabel.textContent = 'Live updates active';
+        // Join the room for this specific booking
+        socket.emit('join_booking', bookingId);
+      });
+
+      socket.on('status_update', (data) => {
+        console.log('📡 Real-time status update:', data);
+        if (String(data.bookingId) === String(bookingId)) {
+          applyStatus(data.status);
         }
+      });
 
-        // Function to fetch and display booking details
-        async function fetchBookingDetails(bookingId) {
-            const infoEl = document.getElementById('info');
-            try {
-                // ✅ FIX: Change the fetch URL to use a query parameter
-                const res = await fetch(`${RENDER_BACKEND_URL}/api/bookings?id=${bookingId}`);
-                if (!res.ok) {
-                    throw new Error(`HTTP error! status: ${res.status}`);
-                }
-                const data = await res.json();
-                const booking = data.bookings[0];
+      socket.on('disconnect', () => {
+        rtDot.classList.remove('connected');
+        rtLabel.textContent = 'Reconnecting…';
+      });
 
-                if (!booking) {
-                    infoEl.textContent = 'Booking not found.';
-                    return;
-                }
+      socket.on('connect_error', (err) => {
+        console.warn('Socket connection error:', err.message);
+        rtDot.classList.remove('connected');
+        rtLabel.textContent = 'Connection issue — polling fallback active';
+        // Fallback: poll every 5 s if socket is unavailable
+        startPollingFallback();
+      });
+    }
 
-                infoEl.innerHTML = `
-                    <strong>ID:</strong> ${booking.id}<br>
-                    <strong>Guest:</strong> ${booking.guest_name}<br>
-                    <strong>Pickup:</strong> ${booking.pickup}<br>
-                    <strong>Dropoff:</strong> ${booking.dropoff}
-                `;
+    // ── HTTP poll fallback (only if WebSocket fails) ──────
+    let pollingInterval = null;
+    function startPollingFallback() {
+      if (pollingInterval) return;   // already started
+      pollingInterval = setInterval(async () => {
+        try {
+          const res  = await fetch(`${BACKEND}/booking-status/${bookingId}`);
+          const data = await res.json();
+          if (data?.status) applyStatus(data.status);
+        } catch (_) { /* silent */ }
+      }, 5000);
+    }
 
-                showGoogleRoute(booking.pickup, booking.dropoff);
-            } catch (error) {
-                console.error('Error fetching booking details:', error);
-                infoEl.textContent = 'Error fetching booking details. Please refresh the page.';
-            }
-        }
-
-        // Function to handle booking cancellation
-        function handleCancelBooking(bookingId) {
-            if (confirm("Are you sure you want to cancel the ride?")) {
-                fetch(`${RENDER_BACKEND_URL}/api/bookings/${bookingId}`, {
-                    method: 'DELETE'
-                }).then(res => {
-                    if (res.ok) {
-                        alert("Booking cancelled successfully!");
-                        window.location.href = "/html/index.html";
-                    } else {
-                        // Attempt to read error message from server if any
-                        res.text().then(text => {
-                            console.error("Failed to cancel booking:", text);
-                            alert("Failed to cancel booking: " + text);
-                        }).catch(err => {
-                            console.error("Failed to cancel booking (no body):", err);
-                            alert("Failed to cancel booking. Server did not provide details.");
-                        });
-                    }
-                }).catch(error => {
-                    console.error('Network error cancelling booking:', error);
-                    alert("A network error occurred while trying to cancel the booking.");
-                });
-            }
-        }
-
-        // Function to poll vendor status and display invoice link
-        const vendorBookingId = new URLSearchParams(window.location.search).get('booking_id');
-        const vendorStatusEl = document.getElementById('vendor-status-badge');
-        const acceptSound = document.getElementById('accept-sound');
-        const rejectSound = document.getElementById('reject-sound');
-        const downloadInvoiceLink = document.getElementById('downloadInvoice'); // Get the download link element
-
-        let previousStatus = 'pending';
-
-        async function fetchVendorStatus() {
-            try {
-                const res = await fetch(`${RENDER_BACKEND_URL}/api/bookings?id=${vendorBookingId}`);
-                if (!res.ok) {
-                    throw new Error(`HTTP error! status: ${res.status}`);
-                }
-                const data = await res.json();
-
-                if (!data || !data.bookings || !data.bookings[0] || !data.bookings[0].status) {
-                    console.warn("No booking data or vendor status found for ID:", vendorBookingId);
-                    return;
-                }
-
-                const currentStatus = data.bookings[0].status.toLowerCase();
-
-                if (currentStatus !== previousStatus) {
-                    previousStatus = currentStatus;
-
-                    if (currentStatus === 'accepted') {
-                        acceptSound.play();
-                        vendorStatusEl.textContent = 'Accepted';
-                        vendorStatusEl.style.backgroundColor = '#4CAF50';
-                        vendorStatusEl.style.color = 'white';
-                        // ✅ INTEGRATED: Show and set the invoice download link
-                        downloadInvoiceLink.href = `${RENDER_BACKEND_URL}/invoice/${vendorBookingId}`;
-                        downloadInvoiceLink.style.display = 'inline-block';
-                    } else if (currentStatus === 'rejected') {
-                        rejectSound.play();
-                        vendorStatusEl.textContent = 'Rejected';
-                        vendorStatusEl.style.backgroundColor = '#f44336';
-                        vendorStatusEl.style.color = 'white';
-                        // ✅ HIDE: Hide invoice link if rejected
-                        downloadInvoiceLink.style.display = 'none';
-                    } else if (currentStatus === 'open_market') {
-                        vendorStatusEl.textContent = 'Moved to Open Market';
-                        vendorStatusEl.style.backgroundColor = '#ff9800';
-                        vendorStatusEl.style.color = 'white';
-                         // ✅ HIDE: Hide invoice link if moved to open market
-                        downloadInvoiceLink.style.display = 'none';
-                    } else {
-                        vendorStatusEl.textContent = 'Pending';
-                        vendorStatusEl.style.backgroundColor = '#ccc';
-                        vendorStatusEl.style.color = '#333';
-                        downloadInvoiceLink.style.display = 'none';
-                    }
-                }
-            } catch (err) {
-                console.error('Error fetching booking status:', err);
-            }
-        }
-
-        // Event listeners and initial calls
-        document.addEventListener('DOMContentLoaded', () => {
-            const bookingIdParam = new URLSearchParams(window.location.search).get('booking_id');
-            if (bookingIdParam) {
-                fetchBookingDetails(bookingIdParam);
-                // Start polling for vendor status
-                setInterval(fetchVendorStatus, 3000);
-                fetchVendorStatus(); // Initial call to display status immediately
-            } else {
-                document.getElementById('info').textContent = "Booking ID not found in URL.";
-            }
-
-            const cancelBtn = document.getElementById('cancelBtn');
-            if (cancelBtn) {
-                cancelBtn.addEventListener('click', () => handleCancelBooking(bookingIdParam));
-            }
-        });
-    </script>
+    // ── Bootstrap ─────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!bookingId) {
+        document.getElementById('info').textContent = 'No booking ID in URL.';
+        return;
+      }
+      fetchBookingDetails();
+      connectSocket();
+    });
+  </script>
 </body>
 </html>

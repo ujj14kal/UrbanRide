@@ -3,13 +3,17 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Your Account - UrbanRide</title>
-  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-  <link rel="stylesheet" href="/css/account.css" />
+  <title>Your Account — UrbanRide</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/account.css">
+  <link rel="icon" type="image/png" href="/images/ur.png">
+  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-auth-compat.js"></script>
 </head>
+
 <body>
+  <!-- ── Navbar ─────────────────────────────────────────── -->
   <header class="navbar">
     <div class="logo">UrbanRide</div>
     <nav>
@@ -18,51 +22,54 @@
     </nav>
   </header>
 
-  <main class="account-section">
+  <!-- ── Auth section (phone → OTP → bookings) ─────────── -->
+  <section class="account-section" id="authSection">
     <h1>Your Account</h1>
-    <p>Enter your mobile number to access your bookings</p>
+    <p>Verify your mobile number to view all your bookings.</p>
 
-    <!-- Phone Number Form -->
-    <form class="account-form" id="phoneForm">
-      <input type="tel" placeholder="Enter your mobile number" name="mobile" required />
-      <div id="recaptcha-container"></div>
-      <button type="submit" id="sendOtpBtn">Send OTP</button>
-    </form>
+    <div class="auth-card">
 
-    <!-- OTP Verification Form -->
-    <form class="account-form" id="otpForm" style="display:none;">
-      <input type="text" placeholder="Enter OTP" id="otpInput" required />
-      <button type="submit" id="verifyOtpBtn">Verify OTP</button>
-    </form>
+      <!-- Step 1: Enter phone -->
+      <form id="phoneForm">
+        <h3>Enter your mobile number</h3>
+        <input type="tel" id="phoneInput" placeholder="+91 98765 43210" required />
+        <p class="phone-hint">Include country code, e.g. +91 for India.</p>
+        <div id="recaptcha-container"></div>
+        <button type="submit" id="sendOtpBtn">Send OTP →</button>
+      </form>
 
-    <!-- Rides Table -->
-    <div class="table-wrapper" style="display:none;" id="bookingsSection">
-      <table id="bookingsTable">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Guest</th>
-            <th>Phone</th>
-            <th>Email</th>
-            <th>Passengers</th>
-            <th>Pickup</th>
-            <th>Dropoff</th>
-            <th>Address</th>
-            <th>Trip Type</th>
-            <th>Date & Time</th>
-            <th>Vehicle Type</th>
-            <th>Driver</th>
-          </tr>
-        </thead>
-        <tbody id="tableBody"></tbody>
-      </table>
+      <!-- Step 2: Verify OTP (hidden until OTP is sent) -->
+      <form id="otpForm" style="display:none;">
+        <h3>Enter the OTP sent to <span id="phoneSent"></span></h3>
+        <input type="text" id="otpInput" placeholder="6-digit code" maxlength="6" required />
+        <button type="submit" id="verifyOtpBtn">Verify →</button>
+        <span class="back-link" id="backToPhone">← Change number</span>
+      </form>
+
+    </div>
+  </section>
+
+  <!-- ── Bookings section (shown after OTP verified) ─────── -->
+  <section id="bookingsSection" style="display:none;">
+    <div class="bookings-header">
+      <h2>Your Rides</h2>
+      <span class="bookings-count" id="bookingsCount">0 rides</span>
     </div>
 
-    <!-- Mobile View Cards -->
-    <div id="bookingsTableContainer" style="margin-top: 30px;"></div>
-    <div class="mobile-cards" id="mobileCardsContainer"></div>
-  </main>
+    <!-- hidden desktop table (kept for accessibility / copy-paste) -->
+    <div class="table-wrapper" style="display:none!important;">
+      <table id="bookingsTable"><thead><tr>
+        <th>ID</th><th>Guest</th><th>Phone</th><th>Email</th>
+        <th>Passengers</th><th>Pickup</th><th>Dropoff</th>
+        <th>Trip</th><th>Date</th><th>Vehicle</th><th>Driver</th>
+      </tr></thead><tbody id="tableBody"></tbody></table>
+    </div>
 
+    <!-- Mobile-first cards -->
+    <div class="mobile-cards" id="mobileCardsContainer"></div>
+  </section>
+
+  <!-- ── Footer ─────────────────────────────────────────── -->
   <footer class="urbanride-footer">
     <div class="footer-container">
       <div class="footer-column">
@@ -99,156 +106,187 @@
       </div>
     </div>
     <div class="footer-bottom">
-      <p class="copyright">©2025 UrbanRide technologies Inc.</p>
+      <p class="copyright">©2025 UrbanRide Technologies Inc.</p>
       <span class="footer-brand">UrbanRide</span>
     </div>
   </footer>
 
+  <!-- ── Scripts ────────────────────────────────────────── -->
   <script>
-    // Firebase config
-    const firebaseConfig = {
-      apiKey: "AIzaSyD2FTLHAoefaLDp33fPYAseWAB3m_F8Kik",
-      authDomain: "urbanride-84afe.firebaseapp.com",
-      projectId: "urbanride-84afe",
-      storageBucket: "urbanride-84afe.appspot.com",
+    const BACKEND = 'https://urbanride.onrender.com';
+
+    // ── Firebase ──────────────────────────────────────────
+    firebase.initializeApp({
+      apiKey:            "AIzaSyD2FTLHAoefaLDp33fPYAseWAB3m_F8Kik",
+      authDomain:        "urbanride-84afe.firebaseapp.com",
+      projectId:         "urbanride-84afe",
+      storageBucket:     "urbanride-84afe.appspot.com",
       messagingSenderId: "302121704417",
-      appId: "1:302121704417:web:d3e320a2232ee77411d0a0",
-      measurementId: "G-ZKV8KCVP3T"
-    };
-
-    firebase.initializeApp(firebaseConfig);
+      appId:             "1:302121704417:web:d3e320a2232ee77411d0a0"
+    });
     const auth = firebase.auth();
-    let confirmationResultGlobal;
+    let confirmationResult;
 
-    const phoneForm = document.getElementById('phoneForm');
-    const otpForm = document.getElementById('otpForm');
+    // ── DOM refs ──────────────────────────────────────────
+    const phoneForm   = document.getElementById('phoneForm');
+    const otpForm     = document.getElementById('otpForm');
+    const authSection = document.getElementById('authSection');
     const bookingsSection = document.getElementById('bookingsSection');
-    const tableBody = document.getElementById('tableBody');
-    const mobileCardsContainer = document.getElementById('mobileCardsContainer');
-    const tableContainer = document.getElementById('bookingsTableContainer');
+    const cards       = document.getElementById('mobileCardsContainer');
+    const countBadge  = document.getElementById('bookingsCount');
 
-    // Send OTP
+    // ── Step 1 — Send OTP ─────────────────────────────────
     phoneForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      let phone = document.querySelector('input[name="mobile"]').value.trim();
+      let phone = document.getElementById('phoneInput').value.trim();
+      if (!phone) return;
+      if (!phone.startsWith('+')) phone = '+91' + phone;
 
-      if (!phone) {
-        alert("Please enter your mobile number.");
-        return;
-      }
+      const btn = document.getElementById('sendOtpBtn');
+      btn.disabled = true;
+      btn.textContent = 'Sending…';
 
-      // Automatically add +91 if missing
-      if (!phone.startsWith('+')) {
-        phone = '+91' + phone;
-      }
-
-      window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
-        size: 'invisible'
-      });
+      window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier(
+        'recaptcha-container', { size: 'invisible' }
+      );
 
       try {
-        confirmationResultGlobal = await auth.signInWithPhoneNumber(phone, window.recaptchaVerifier);
-        alert('OTP sent to ' + phone);
-        otpForm.style.display = 'block';
+        confirmationResult = await auth.signInWithPhoneNumber(phone, window.recaptchaVerifier);
+        document.getElementById('phoneSent').textContent = phone;
         phoneForm.style.display = 'none';
+        otpForm.style.display   = 'block';
       } catch (err) {
-        console.error('Error sending OTP:', err);
-        alert(err.message);
+        alert('Could not send OTP: ' + err.message);
+        btn.disabled = false;
+        btn.textContent = 'Send OTP →';
       }
     });
 
-    // Verify OTP
+    // ── Back to phone ─────────────────────────────────────
+    document.getElementById('backToPhone').addEventListener('click', () => {
+      otpForm.style.display   = 'none';
+      phoneForm.style.display = 'block';
+      document.getElementById('sendOtpBtn').disabled    = false;
+      document.getElementById('sendOtpBtn').textContent = 'Send OTP →';
+    });
+
+    // ── Step 2 — Verify OTP ───────────────────────────────
     otpForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const otp = document.getElementById('otpInput').value.trim();
-      if (!otp) {
-        alert("Please enter OTP.");
-        return;
-      }
+      if (!otp) return;
+
+      const btn = document.getElementById('verifyOtpBtn');
+      btn.disabled = true;
+      btn.textContent = 'Verifying…';
 
       try {
-        await confirmationResultGlobal.confirm(otp);
-        alert('OTP verified successfully.');
-        otpForm.style.display = 'none';
+        await confirmationResult.confirm(otp);
+        const rawPhone = document.getElementById('phoneInput').value.trim();
+        authSection.style.display    = 'none';
         bookingsSection.style.display = 'block';
-        fetchBookings(document.querySelector('input[name="mobile"]').value.trim());
+        fetchBookings(rawPhone);
       } catch (err) {
-        console.error('Error verifying OTP:', err);
-        alert('Invalid OTP.');
+        alert('Invalid OTP. Please try again.');
+        btn.disabled = false;
+        btn.textContent = 'Verify →';
       }
     });
 
-    // Fetch bookings from backend
+    // ── Fetch and render bookings ─────────────────────────
     async function fetchBookings(phone) {
-      const RENDER_BACKEND_URL = 'https://urbanride.onrender.com';
-      tableBody.innerHTML = '';
-      mobileCardsContainer.innerHTML = '';
-      tableContainer.innerHTML = '';
+      cards.innerHTML = '<p style="text-align:center;color:#a3a3a3;padding:3rem 0">Loading rides…</p>';
 
       try {
-        const res = await fetch(`${RENDER_BACKEND_URL}/api/bookings/by-phone/${phone}`);
-        if (!res.ok) throw new Error(`HTTP error! Status: ${res.status}`);
-        const data = await res.json();
-
-        if (data.length === 0) {
-          tableContainer.innerHTML += '<p style="text-align:center; color: grey;">No bookings found for this number.</p>';
+        const res  = await fetch(`${BACKEND}/api/bookings/by-phone/${encodeURIComponent(phone)}`);
+        if (res.status === 404) {
+          cards.innerHTML = emptyState('No rides found for this number.');
+          countBadge.textContent = '0 rides';
           return;
         }
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-        // Populate table
-        data.forEach(row => {
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td>${row.id || ''}</td>
-            <td>${row.guest_name || ''}</td>
-            <td>${row.phone || ''}</td>
-            <td>${row.email || ''}</td>
-            <td>${row.passengers || ''}</td>
-            <td>${row.pickup || ''}</td>
-            <td>${row.dropoff || ''}</td>
-            <td>${row.address || ''}</td>
-            <td>${row.trip_type || ''}</td>
-            <td>${row.date_time ? new Date(row.date_time).toLocaleString() : ''}</td>
-            <td>${row.vehicle_type || ''}</td>
-            <td>${row.associated_member || ''}</td>
-          `;
-          tableBody.appendChild(tr);
-        });
-
-        // Populate mobile cards
-        data.forEach(row => {
-          const card = document.createElement('div');
-          card.className = 'mobile-card';
-          card.innerHTML = `
-            <p><strong>ID:</strong> ${row.id || ''}</p>
-            <p><strong>Guest:</strong> ${row.guest_name || ''}</p>
-            <p><strong>Phone:</strong> ${row.phone || ''}</p>
-            <p><strong>Email:</strong> ${row.email || ''}</p>
-            <p><strong>Passengers:</strong> ${row.passengers || ''}</p>
-            <p><strong>Pickup:</strong> ${row.pickup || ''}</p>
-            <p><strong>Dropoff:</strong> ${row.dropoff || ''}</p>
-            <p><strong>Address:</strong> ${row.address || ''}</p>
-            <p><strong>Trip Type:</strong> ${row.trip_type || ''}</p>
-            <p><strong>Date & Time:</strong> ${row.date_time ? new Date(row.date_time).toLocaleString() : ''}</p>
-            <p><strong>Vehicle Type:</strong> ${row.vehicle_type || ''}</p>
-            <p><strong>Driver:</strong> ${row.associated_member || ''}</p>
-          `;
-
-        
-          mobileCardsContainer.appendChild(card);
-        });
-
+        const data = await res.json();
+        countBadge.textContent = `${data.length} ride${data.length !== 1 ? 's' : ''}`;
+        cards.innerHTML = '';
+        data.forEach(row => cards.appendChild(buildCard(row)));
       } catch (err) {
-        console.error('Error fetching bookings:', err);
-        tableContainer.innerHTML += `<p style="color: red;">Error fetching bookings: ${err.message}.</p>`;
+        cards.innerHTML = `<p style="color:#dc2626;text-align:center;padding:2rem">Error: ${err.message}</p>`;
       }
     }
 
+    // ── Build a booking card ──────────────────────────────
+    function buildCard(r) {
+      const card = document.createElement('div');
+      card.className = 'mobile-card';
 
-   
+      const statusClass = (r.status || 'pending').toLowerCase().replace(' ', '_');
+      const statusLabel = {
+        pending:     'Pending',
+        accepted:    'Accepted',
+        rejected:    'Rejected',
+        open_market: 'Open Market',
+        cancelled:   'Cancelled'
+      }[statusClass] || r.status;
+
+      const dateStr = r.date_time
+        ? new Date(r.date_time).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
+        : '—';
+
+      card.innerHTML = `
+        <div class="card-header">
+          <span class="card-id">Ride #${r.id}</span>
+          <span class="status-badge ${statusClass}">${statusLabel}</span>
+        </div>
+
+        <div class="card-route">
+          <div class="route-point">
+            <span class="route-dot pickup"></span>
+            <span>${r.pickup || '—'}</span>
+          </div>
+          <div class="route-point">
+            <span class="route-dot dropoff"></span>
+            <span>${r.dropoff || '—'}</span>
+          </div>
+        </div>
+
+        <div class="card-details">
+          <div class="card-detail-item">
+            <span class="detail-key">Date</span>
+            <span class="detail-value">${dateStr}</span>
+          </div>
+          <div class="card-detail-item">
+            <span class="detail-key">Vehicle</span>
+            <span class="detail-value">${r.vehicle_type || '—'}</span>
+          </div>
+          <div class="card-detail-item">
+            <span class="detail-key">Passengers</span>
+            <span class="detail-value">${r.passengers || 1}</span>
+          </div>
+          <div class="card-detail-item">
+            <span class="detail-key">Driver</span>
+            <span class="detail-value">${r.associated_member || '—'}</span>
+          </div>
+          ${r.status === 'accepted' ? `
+          <div class="card-detail-item" style="grid-column:1/-1;margin-top:.5rem">
+            <a href="${BACKEND}/invoice/${r.id}"
+               style="font-size:.82rem;font-weight:600;color:#000;text-decoration:underline;text-underline-offset:3px"
+               download>⬇ Download Invoice</a>
+          </div>` : ''}
+        </div>
+      `;
+      return card;
+    }
+
+    function emptyState(msg) {
+      return `<div class="empty-state">
+        <svg width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+            d="M9 17v-2m3 2v-4m3 4v-6M4 21h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v15a1 1 0 001 1z"/>
+        </svg>
+        <p>${msg}</p>
+      </div>`;
+    }
   </script>
 </body>
 </html>
-
-
-

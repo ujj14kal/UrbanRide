@@ -1,164 +1,162 @@
-require('dotenv').config(); // ✅ Load environment variables from .env
+// vc.js — Vendor Consumer
+// Consumes ride_requests from RabbitMQ, notifies vendor via Telegram inline buttons,
+// and pushes real-time status updates via Socket.io when the vendor responds.
 
+require('dotenv').config();
 
-const amqp = require('amqplib');
+const amqp        = require('amqplib');
 const TelegramBot = require('node-telegram-bot-api');
-const mysql = require('mysql2/promise'); // ✅ Use the promise-based version
+const mysql       = require('mysql2/promise');
+const socketModule = require('./socket');
+const { statusCache, bookingCache } = require('./cache');
 
-const { generateInvoice } = require('./invoice'); // ✅ Correctly import the generateInvoice function
-const invoiceRouter = require('./invoiceRouter'); // or './invoiceRouter.js' depending on your filename
-
-
-
-
-// === Environment Variables ===
-const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://localhost';
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
-const MYSQL_HOST = process.env.MYSQLHOST;
-const MYSQL_USER = process.env.MYSQLUSER;
-const MYSQLPORT = process.env.MYSQLPORT;
-const MYSQL_PASSWORD = process.env.MYSQLPASSWORD;
-const MYSQL_DATABASE = process.env.MYSQLDATABASE;
+// ── Environment ───────────────────────────────────────────────────────────────
+const {
+  RABBITMQ_URL,
+  TELEGRAM_BOT_TOKEN,
+  TELEGRAM_CHAT_ID,
+  MYSQLHOST,
+  MYSQLUSER,
+  MYSQLPASSWORD,
+  MYSQLDATABASE,
+  MYSQLPORT
+} = process.env;
 
 if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
-    console.error('❌ Missing Telegram bot token or chat ID environment variables.');
-    process.exit(1);
+  console.error('❌ Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID env vars.');
+  process.exit(1);
 }
 
-// === Telegram Bot Setup ===
+// ── Telegram bot ──────────────────────────────────────────────────────────────
 const bot = new TelegramBot(TELEGRAM_BOT_TOKEN, { polling: true });
 
-// === MySQL Connection Pool ===
-// ✅ Use a connection pool for a more robust connection
+// ── MySQL connection pool (separate from the one in db.js) ────────────────────
 const pool = mysql.createPool({
-    host: MYSQL_HOST,
-    user: MYSQL_USER,
-    password: MYSQL_PASSWORD,
-    database: MYSQL_DATABASE,
-    port: MYSQLPORT,
-   ssl: {
-        rejectUnauthorized: false  // 👈 Aiven requires SSL/TLS
-    },
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0
+  host:             MYSQLHOST,
+  user:             MYSQLUSER,
+  password:         MYSQLPASSWORD,
+  database:         MYSQLDATABASE,
+  port:             MYSQLPORT,
+  ssl:              { rejectUnauthorized: false },
+  waitForConnections: true,
+  connectionLimit:  10,
+  queueLimit:       0
 });
 
-// ✅ Add an error listener to prevent unhandled promise rejections and crashes
 pool.getConnection()
-    .then(conn => {
-        console.log('✅ Connected to MySQL database via connection pool!');
-        conn.release();
-    })
-    .catch(err => {
-        console.error('❌ Failed to connect to MySQL pool:', err);
-        process.exit(1);
-    });
+  .then(conn => {
+    console.log('✅ vc.js connected to MySQL pool');
+    conn.release();
+  })
+  .catch(err => {
+    console.error('❌ vc.js MySQL pool error:', err);
+    process.exit(1);
+  });
 
-
-// === Send Booking to Telegram ===
+// ── Telegram notification ─────────────────────────────────────────────────────
 async function sendToTelegram(booking) {
-    const message = `
+  const message = `
 🚖 *New Ride Booking* 🚖
 
-*Guest Name:* ${booking.guest_name}
+*Guest:* ${booking.guest_name}
 *Phone:* ${booking.phone}
 *Pickup:* ${booking.pickup}
 *Dropoff:* ${booking.dropoff}
-*Booking ID:* ${booking.id}
+*Vehicle:* ${booking.vehicle_type}
+*Booking ID:* \`${booking.id}\`
 `;
 
-    const options = {
-        parse_mode: 'Markdown',
-        reply_markup: {
-            inline_keyboard: [[
-                { text: '✅ Accept', callback_data: `accept_${booking.id}` },
-                { text: '❌ Reject', callback_data: `reject_${booking.id}` },
-                { text: '📤 Open Market', callback_data: `open_${booking.id}` }
-            ]]
-        }
-    };
-
-    return bot.sendMessage(TELEGRAM_CHAT_ID, message, options);
+  return bot.sendMessage(TELEGRAM_CHAT_ID, message, {
+    parse_mode: 'Markdown',
+    reply_markup: {
+      inline_keyboard: [[
+        { text: '✅ Accept',      callback_data: `accept_${booking.id}` },
+        { text: '❌ Reject',      callback_data: `reject_${booking.id}` },
+        { text: '📤 Open Market', callback_data: `open_${booking.id}`   }
+      ]]
+    }
+  });
 }
 
-// === Handle Telegram Button Responses ===
+// ── Telegram button handler ───────────────────────────────────────────────────
 bot.on('callback_query', async (query) => {
-    const [action, rideId] = query.data.split('_');
-    let newStatus;
+  const [action, rideId] = query.data.split('_');
 
-    switch (action) {
-        case 'accept':
-            newStatus = 'accepted';
-            break;
-        case 'reject':
-            newStatus = 'rejected';
-            break;
-        case 'open':
-            newStatus = 'open_market';
-            break;
-        default:
-            return;
-    }
+  const newStatus =
+    action === 'accept' ? 'accepted'   :
+    action === 'reject' ? 'rejected'   :
+    action === 'open'   ? 'open_market': null;
 
-    try {
-        // ✅ Use the connection pool for the update query
-        await pool.query(
-            'UPDATE rides SET status = ? WHERE id = ?',
-            [newStatus, rideId]
-        );
-if (newStatus === 'accepted') {
-  // 🔄 Fetch the booking again to pass complete data to the invoice generator
-  const [rows] = await pool.query('SELECT * FROM rides WHERE id = ?', [rideId]);
-  const booking = rows[0];
+  if (!newStatus) return;
 
-  if (booking) {
-    await generateInvoice(booking);
-    console.log(`🧾 Invoice generated for ride ID ${rideId}`);
-  } else {
-    console.warn(`⚠️ Booking not found for invoice generation: ID ${rideId}`);
+  try {
+    await pool.query(
+      'UPDATE rides SET status = ? WHERE id = ?',
+      [newStatus, rideId]
+    );
+
+    // Invalidate caches so next HTTP poll fetches fresh data
+    statusCache.del(`status_${rideId}`);
+    bookingCache.del(`booking_${rideId}`);
+
+    // ✅ Real-time push — all clients watching this booking get instant update
+    try {
+      const io = socketModule.getIO();
+      io.to(`booking_${rideId}`).emit('status_update', {
+        bookingId: rideId,
+        status:    newStatus
+      });
+      console.log(`📡 Socket pushed status_update for booking ${rideId}: ${newStatus}`);
+    } catch (socketErr) {
+      // Non-fatal — client will fall back to HTTP poll
+      console.warn('⚠️  Socket emit failed:', socketErr.message);
+    }
+
+    console.log(`✅ Booking ${rideId} → ${newStatus}`);
+    bot.sendMessage(
+      TELEGRAM_CHAT_ID,
+      `✅ Booking *${rideId}* marked as *${newStatus}*`,
+      { parse_mode: 'Markdown' }
+    );
+  } catch (err) {
+    console.error('❌ DB update error:', err);
+    bot.sendMessage(TELEGRAM_CHAT_ID, `⚠️ Failed to update booking ${rideId}`);
   }
-}
-        // ✅ Log the update and send confirmation to Telegram
-        console.log(`✅ Booking ${rideId} updated to ${newStatus}`);
-        bot.sendMessage(TELEGRAM_CHAT_ID, `✅ Booking *${rideId}* marked as *${newStatus}*`, { parse_mode: 'Markdown' });
-    } catch (err) {
-        console.error('❌ DB update error:', err);
-        bot.sendMessage(TELEGRAM_CHAT_ID, `✅ Booking *${rideId}* marked as *${newStatus}*`);
-    }
 
-    bot.answerCallbackQuery(query.id); // Acknowledge click
+  bot.answerCallbackQuery(query.id);
 });
 
-// === Connect to RabbitMQ & Consume Bookings ===
+// ── RabbitMQ consumer ─────────────────────────────────────────────────────────
 async function receiveMessages() {
-    try {
-        const connection = await amqp.connect(RABBITMQ_URL);
-        const channel = await connection.createChannel();
-        const queue = 'ride_requests';
+  try {
+    const conn    = await amqp.connect(RABBITMQ_URL || 'amqp://localhost');
+    const channel = await conn.createChannel();
+    const queue   = 'ride_requests';
 
-        await channel.assertQueue(queue, { durable: true });
-        console.log('✅ Waiting for booking messages...');
+    await channel.assertQueue(queue, { durable: true });
+    channel.prefetch(1);   // Process one message at a time
+    console.log('✅ vc.js waiting for booking messages…');
 
-        channel.consume(queue, async (msg) => {
-            const booking = JSON.parse(msg.content.toString());
-            console.log('📦 Received booking:\n', booking);
+    channel.consume(queue, async (msg) => {
+      if (!msg) return;
 
-            try {
-                await sendToTelegram(booking);
-                console.log(`📨 Sent booking ID ${booking.id} to Telegram`);
-                channel.ack(msg);
-            } catch (error) {
-                console.error('❌ Failed to send to Telegram:', error?.response?.data || error.message);
-                channel.nack(msg, false, true);
-            }
-        }, { noAck: false });
+      const booking = JSON.parse(msg.content.toString());
+      console.log(`📦 Received booking ID ${booking.id}`);
 
-    } catch (error) {
-        console.error('❌ Error connecting to RabbitMQ:', error.message);
-    }
+      try {
+        await sendToTelegram(booking);
+        console.log(`📨 Booking ${booking.id} sent to Telegram`);
+        channel.ack(msg);
+      } catch (err) {
+        console.error('❌ Telegram send failed:', err?.response?.data || err.message);
+        channel.nack(msg, false, true);  // requeue
+      }
+    }, { noAck: false });
+
+  } catch (err) {
+    console.error('❌ RabbitMQ consumer error:', err.message);
+    setTimeout(receiveMessages, 5000);   // retry after 5 s
+  }
 }
 
 receiveMessages();
-

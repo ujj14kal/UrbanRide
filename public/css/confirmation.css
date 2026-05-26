@@ -1,176 +1,280 @@
-/* Reset & Base */
+/* =========================================================
+   UrbanRide — Confirmation page  (confirmation.css)
+   ========================================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  --black:    #000;
+  --white:    #fff;
+  --gray-50:  #fafafa;
+  --gray-100: #f5f5f5;
+  --gray-200: #e5e5e5;
+  --gray-400: #a3a3a3;
+  --gray-600: #525252;
+  --green:    #16a34a;
+  --red:      #dc2626;
+  --amber:    #f59e0b;
+  --font:     'Inter', -apple-system, sans-serif;
+  --radius:   12px;
+  --transition: 0.22s cubic-bezier(.4,0,.2,1);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+
 body {
-    font-family: 'Inter', sans-serif; /* Consider 'Inter' or 'Montserrat' if importing, otherwise 'Segoe UI' */
-    margin: 0;
-    padding: 0;
-    background: #f8faff; /* Slightly softer background */
-    color: #333; /* Slightly darker text for better contrast */
-    line-height: 1.6; /* Improved readability */
+  font-family: var(--font);
+  background: var(--gray-100);
+  color: var(--black);
 }
 
-/* Navbar */
-.navbar {
-    background-color: #000;
-    color: white;
-    padding: 18px 40px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2); /* Slightly stronger shadow */
-    position: sticky;
-    top: 0;
-    z-index: 1000;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1); /* Subtle bottom border */
-}
-
-.navbar .logo {
-    font-weight: 700;
-    font-size: 24px; /* Slightly larger logo */
-    letter-spacing: 0.8px; /* Increased letter spacing */
-}
-
-.navbar nav a {
-    margin-left: 28px; /* Slightly more spacing */
-    color: #fff;
-    text-decoration: none;
-    font-weight: 500;
-    transition: color 0.2s ease, transform 0.2s ease; /* Added transform for a subtle animation */
-}
-
-.navbar nav a:hover {
-    color: #add8e6; /* Lighter blue on hover for more distinction */
-    transform: translateY(-2px); /* Subtle lift on hover */
-}
-
-/* Confirmation Section */
+/* ── Confirmation layout ─────────────────────────────────── */
 .confirmation-container {
-    padding: 80px 20px; /* More vertical padding */
-    text-align: center;
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 3rem 1.5rem 6rem;
 }
 
-.confirmation-container h1 {
-    font-size: 38px; /* Larger, more impactful heading */
-    margin-bottom: 25px;
-    color: #28a745; /* Green for confirmed status */
-    font-weight: 800; /* Bolder font for emphasis */
-    letter-spacing: 0.5px;
+.confirmation-container > h1 {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 800;
+  letter-spacing: -.5px;
+  text-align: center;
+  margin-bottom: .5rem;
+  color: var(--black);
 }
 
-.confirmation-container p {
-    font-size: 17px; /* Slightly larger paragraph text */
-    color: #555;
-    max-width: 650px; /* Wider content area for text */
-    margin: 0 auto 35px; /* More margin below paragraphs */
+.confirmation-container > p {
+  text-align: center;
+  font-size: .925rem;
+  color: var(--gray-600);
+  max-width: 600px;
+  margin: 0 auto 2.5rem;
+  line-height: 1.65;
 }
 
-.confirmation-container p strong {
-    color: #222; /* Make specific details bolder */
+/* ── Booking info card ───────────────────────────────────── */
+#info {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  padding: 1.5rem 2rem;
+  margin-bottom: 2rem;
+  font-size: .92rem;
+  line-height: 1.75;
+  box-shadow: 0 1px 6px rgba(0,0,0,.06);
 }
 
-/* Map */
+#info strong {
+  font-weight: 600;
+  color: var(--black);
+  display: inline-block;
+  min-width: 90px;
+}
+
+/* ── Map ─────────────────────────────────────────────────── */
 #map {
-    width: 100%;
-    height: 500px; /* Slightly taller map */
-    max-width: 1000px; /* Wider map */
-    margin: 40px auto; /* More margin around the map */
-    border-radius: 18px; /* Slightly more rounded corners */
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2); /* Enhanced shadow for depth */
-    border: 2px solid #e0e0e0;
+  width: 100%;
+  height: 420px;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.14);
+  border: 1px solid var(--gray-200);
+  margin-bottom: 1.5rem;
+  overflow: hidden;
 }
 
-/* Cancel Button */
+/* ── Fare estimate ───────────────────────────────────────── */
+#fare-estimate {
+  background: var(--black);
+  color: var(--white);
+  border-radius: var(--radius);
+  padding: 1rem 1.5rem;
+  font-size: .92rem;
+  font-weight: 500;
+  text-align: center;
+  letter-spacing: .3px;
+  margin-bottom: 2rem;
+}
+
+/* ── Vendor status card ──────────────────────────────────── */
+.status-card {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  padding: 2rem;
+  margin-bottom: 2rem;
+  text-align: center;
+  box-shadow: 0 1px 6px rgba(0,0,0,.06);
+}
+
+.status-card .status-label {
+  font-size: .72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--gray-400);
+  margin-bottom: .75rem;
+}
+
+/* real-time connection dot */
+.rt-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  font-size: .78rem;
+  font-weight: 500;
+  color: var(--gray-400);
+  margin-bottom: 1rem;
+}
+
+.rt-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--gray-400);
+  flex-shrink: 0;
+}
+
+.rt-dot.connected {
+  background: var(--green);
+  box-shadow: 0 0 0 3px rgba(22,163,74,.25);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(22,163,74,.25); }
+  50%       { box-shadow: 0 0 0 6px rgba(22,163,74,.1);  }
+}
+
+#vendor-status-badge {
+  display: inline-block;
+  padding: .6rem 1.6rem;
+  border-radius: 9999px;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: .3px;
+  background: var(--gray-100);
+  color: var(--gray-600);
+  border: 1.5px solid var(--gray-200);
+  transition: all .4s ease;
+}
+
+#vendor-status-badge.accepted {
+  background: #dcfce7;
+  color: #166534;
+  border-color: #86efac;
+}
+
+#vendor-status-badge.rejected {
+  background: #fee2e2;
+  color: #991b1b;
+  border-color: #fca5a5;
+}
+
+#vendor-status-badge.open_market {
+  background: #fef3c7;
+  color: #92400e;
+  border-color: #fcd34d;
+}
+
+/* ── Action buttons ──────────────────────────────────────── */
+.action-row {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 2rem;
+}
+
 #cancelBtn {
-    background-color: #e53935;
-    color: white;
-    border: none;
-    padding: 16px 36px; /* Larger padding for a more prominent button */
-    margin-top: 40px; /* More margin above the button */
-    font-size: 18px; /* Larger font size */
-    border-radius: 12px; /* More rounded corners */
-    cursor: pointer;
-    transition: background-color 0.3s ease, transform 0.3s ease; /* Added transform for hover */
-    font-weight: 600;
-    letter-spacing: 0.5px;
+  padding: .8rem 2rem;
+  background: var(--white);
+  color: var(--red);
+  border: 1.5px solid var(--red);
+  border-radius: 9999px;
+  font-size: .92rem;
+  font-weight: 600;
+  font-family: var(--font);
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition), transform var(--transition);
 }
 
 #cancelBtn:hover {
-    background-color: #c62828;
-    transform: translateY(-2px); /* Subtle lift on hover */
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); /* Shadow on hover */
+  background: var(--red);
+  color: var(--white);
+  transform: translateY(-2px);
 }
-
-/* Legend */
-#legend {
-    margin: 40px auto 30px; /* Adjusted margins */
-    font-size: 15px;
-    text-align: left;
-    max-width: 650px; /* Matches content width */
-    background: #fff;
-    padding: 20px 28px; /* More padding inside */
-    border-radius: 14px; /* Slightly more rounded */
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1); /* Enhanced shadow */
-    border-left: 5px solid #111; /* Slightly thicker border */
-}
-
-#legend h3 {
-    margin-top: 0;
-    font-size: 19px; /* Slightly larger heading */
-    font-weight: 700; /* Bolder */
-    color: #111;
-    margin-bottom: 12px;
-}
-
-#legend .marker {
-    display: inline-block;
-    width: 15px; /* Slightly larger markers */
-    height: 15px;
-    margin-right: 12px; /* More spacing */
-    border-radius: 50%;
-    vertical-align: middle;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2); /* Subtle shadow on markers */
-}
-
-#legend .pickup {
-    background-color: #4caf50;
-}
-
-#legend .dropoff {
-    background-color: #f44336;
-}
-
-#legend .line {
-    display: inline-block;
-    width: 45px; /* Slightly longer line */
-    height: 5px; /* Slightly thicker line */
-    background: #555;
-    margin-left: 10px;
-    vertical-align: middle;
-    border-radius: 2px; /* Slightly rounded line ends */
-}
-
 
 #downloadInvoice {
-  display: inline-block;
-  padding: 12px 24px;
-  background-color: #000; /* Uber-style black */
-  color: #fff;
-  font-size: 16px;
-  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  display: none;
+  padding: .8rem 2rem;
+  background: var(--black);
+  color: var(--white);
+  border-radius: 9999px;
+  font-size: .92rem;
   font-weight: 600;
   text-decoration: none;
-  border-radius: 10px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
-  transition: background-color 0.3s ease, transform 0.2s ease;
-  text-align: center;
-  margin-top: 20px;
+  transition: opacity var(--transition), transform var(--transition);
+  box-shadow: 0 4px 14px rgba(0,0,0,.2);
 }
 
-#downloadInvoice:hover {
-  background-color: #333;
-  transform: translateY(-1px);
+#downloadInvoice:hover { opacity: .84; transform: translateY(-2px); }
+
+/* ── Footer ──────────────────────────────────────────────── */
+.urbanride-footer {
+  background: var(--black);
+  color: var(--white);
+  padding: 3rem 2rem 1.5rem;
+  margin-top: 4rem;
+  border-top: 1px solid rgba(255,255,255,.08);
 }
 
-#downloadInvoice:active {
-  transform: scale(0.97);
+.footer-container {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 1.5rem;
+  padding-bottom: 2rem;
 }
 
+.footer-column h4 {
+  font-size: .72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--gray-400);
+  margin-bottom: .85rem;
+}
+
+.footer-column ul { list-style: none; }
+.footer-column ul li { margin-bottom: .5rem; }
+.footer-column ul li a {
+  font-size: .875rem;
+  color: rgba(255,255,255,.65);
+  text-decoration: none;
+  transition: color var(--transition);
+}
+.footer-column ul li a:hover { color: var(--white); }
+
+.footer-bottom {
+  max-width: 1100px;
+  margin: 0 auto;
+  border-top: 1px solid rgba(255,255,255,.08);
+  padding-top: 1.25rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+
+.footer-bottom .copyright { font-size: .78rem; color: var(--gray-400); }
+.footer-bottom .footer-brand { font-size: 1rem; font-weight: 800; }
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .confirmation-container { padding: 2rem 1rem 5rem; }
+  #map { height: 300px; }
+  #info { padding: 1.25rem; }
+}
