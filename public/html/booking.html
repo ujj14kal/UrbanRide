@@ -7,182 +7,397 @@
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/booking.css">
   <link rel="icon" type="image/png" href="/images/ur.png">
+
+  <!-- Firebase SDKs (free — no billing required) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 </head>
 
 <body>
-  <!-- ── Navbar ─────────────────────────────────────────── -->
-  <header class="navbar">
-    <div class="logo">UrbanRide</div>
-    <nav>
-      <a href="/html/index.html">Home</a>
-      <a href="/html/account.html">Account</a>
-      <a href="/html/booking.html" class="book-now">Book a Ride</a>
-    </nav>
-  </header>
 
-  <!-- ── Form ───────────────────────────────────────────── -->
-  <div class="form-container">
-    <h2>Book Your Ride</h2>
-    <p class="form-subtitle">Fill in the details below and we'll match you with a driver instantly.</p>
+  <!-- ════════════════════════════════════════════════════════════
+       OTP GATE OVERLAY — shown before the booking form
+  ════════════════════════════════════════════════════════════ -->
+  <div id="otpGate" class="otp-gate">
+    <div class="otp-card">
 
-    <form id="bookingForm" novalidate>
+      <!-- Step 1: phone number -->
+      <div id="otpStep1">
+        <div class="otp-logo">UrbanRide</div>
+        <p class="otp-tagline">Verify your mobile to book instantly</p>
 
-      <!-- Guest details -->
-      <p class="form-section-title">Guest Details</p>
-      <div class="form-row">
-        <div class="form-group">
-          <label for="guestName">Full Name *</label>
-          <input type="text" id="guestName" name="guestName" placeholder="John Smith" required />
+        <div class="otp-input-wrap">
+          <span class="otp-prefix">+91</span>
+          <input id="phoneInput" type="tel" inputmode="numeric" maxlength="10"
+                 placeholder="10-digit mobile number" />
         </div>
-        <div class="form-group">
-          <label for="mobile">Mobile Number *</label>
-          <input type="tel" id="mobile" name="mobile" placeholder="+91 98765 43210" required />
-        </div>
+
+        <!-- reCAPTCHA invisible container -->
+        <div id="recaptcha-container"></div>
+
+        <button class="otp-btn" id="sendOtpBtn">Send OTP →</button>
+        <p class="otp-note">A 6-digit OTP will be sent via SMS. Free service — no charges.</p>
+        <p class="otp-err" id="phoneErr"></p>
       </div>
 
-      <div class="form-row">
-        <div class="form-group">
-          <label for="email">Email Address</label>
-          <input type="email" id="email" name="email" placeholder="john@company.com" />
+      <!-- Step 2: OTP input -->
+      <div id="otpStep2" style="display:none">
+        <div class="otp-logo">UrbanRide</div>
+        <p class="otp-tagline">Enter the OTP sent to <strong id="otpPhoneDisplay"></strong></p>
+
+        <div class="otp-digits" id="otpDigits">
+          <input type="text" inputmode="numeric" maxlength="1" class="otp-digit" />
+          <input type="text" inputmode="numeric" maxlength="1" class="otp-digit" />
+          <input type="text" inputmode="numeric" maxlength="1" class="otp-digit" />
+          <input type="text" inputmode="numeric" maxlength="1" class="otp-digit" />
+          <input type="text" inputmode="numeric" maxlength="1" class="otp-digit" />
+          <input type="text" inputmode="numeric" maxlength="1" class="otp-digit" />
         </div>
-        <div class="form-group">
-          <label for="passengers">No. of Passengers *</label>
-          <input type="number" id="passengers" name="passengers" min="1" max="50" placeholder="1" required />
-        </div>
+
+        <button class="otp-btn" id="verifyOtpBtn">Verify &amp; Continue →</button>
+        <button class="otp-back" id="resendOtpBtn">Resend OTP</button>
+        <p class="otp-err" id="otpErr"></p>
       </div>
 
-      <div class="form-row">
-        <div class="form-group full-width">
-          <label for="address">Billing / Company Address</label>
-          <textarea id="address" name="address" rows="2" placeholder="123 Main Street, New Delhi 110001"></textarea>
-        </div>
-      </div>
-
-      <!-- Route -->
-      <p class="form-section-title">Route</p>
-      <div class="form-row">
-        <div class="form-group">
-          <label for="pickup">Pickup Location *</label>
-          <input id="pickup" type="text" name="pickup" placeholder="Start typing an address…" required />
-        </div>
-        <div class="form-group">
-          <label for="dropoff">Drop-off Location *</label>
-          <input id="dropoff" type="text" name="dropoff" placeholder="Start typing an address…" required />
-        </div>
-      </div>
-
-      <!-- Trip info box — shown after both locations are picked -->
-      <div id="tripInfo">Route details will appear here once both locations are selected.</div>
-
-      <!-- Ride options -->
-      <p class="form-section-title">Ride Options</p>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Trip Type *</label>
-          <div class="radio-row">
-            <label class="radio-option">
-              <input type="radio" name="tripType" value="Local" required /> Local
-            </label>
-            <label class="radio-option">
-              <input type="radio" name="tripType" value="Outstation" /> Outstation
-            </label>
-          </div>
-        </div>
-        <div class="form-group">
-          <label for="datetime">Date &amp; Time *</label>
-          <input type="datetime-local" id="datetime" name="datetime" required />
-        </div>
-      </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label for="vehicle">Vehicle Type *</label>
-          <select id="vehicle" name="vehicle_type" required>
-            <option value="">Select vehicle</option>
-            <option value="Sedan">Sedan</option>
-            <option value="SUV">SUV</option>
-            <option value="Luxury">Luxury</option>
-            <option value="Tempo Traveller">Tempo Traveller</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="member">Assigned Driver / Member</label>
-          <select id="member" name="associated_member">
-            <option value="">Select member</option>
-            <option value="John">John</option>
-            <option value="Priya">Priya</option>
-            <option value="Amit">Amit</option>
-            <option value="Other">Other</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- Submit -->
-      <div class="form-row">
-        <div class="form-group full-width">
-          <button type="submit" class="submit-btn" id="submitBtn">
-            <span class="btn-text">Confirm Booking →</span>
-            <span class="btn-spinner"></span>
-          </button>
-        </div>
-      </div>
-
-    </form>
+    </div>
   </div>
 
-  <div id="popupMessage" class="popup-message"></div>
-
-  <!-- ── Footer ─────────────────────────────────────────── -->
-  <footer class="urbanride-footer">
-    <div class="footer-container">
-      <div class="footer-column">
-        <h4>Company</h4>
-        <ul>
-          <li><a href="#">About us</a></li>
-          <li><a href="#">Our services</a></li>
-          <li><a href="#">Blog</a></li>
-          <li><a href="#">Careers</a></li>
-        </ul>
-      </div>
-      <div class="footer-column">
-        <h4>Products</h4>
-        <ul>
-          <li><a href="#">Ride</a></li>
-          <li><a href="#">Drive</a></li>
-          <li><a href="#">Urban Auto</a></li>
-          <li><a href="#">Urban Moto</a></li>
-        </ul>
-      </div>
-      <div class="footer-column">
-        <h4>Travel</h4>
-        <ul>
-          <li><a href="#">Airports</a></li>
-          <li><a href="#">Cities</a></li>
-        </ul>
-      </div>
-      <div class="footer-column">
-        <h4>Support</h4>
-        <ul>
-          <li><a href="#">Help Center</a></li>
-          <li><a href="#">Contact us</a></li>
-        </ul>
+  <!-- ════════════════════════════════════════════════════════════
+       POST-BOOKING REDIRECT OVERLAY — 5 s countdown
+  ════════════════════════════════════════════════════════════ -->
+  <div id="bookingRedirectOverlay" class="booking-redirect-overlay" style="display:none">
+    <div class="bro-card">
+      <span class="bro-icon">🎉</span>
+      <h2>Ride Booked!</h2>
+      <p class="bro-sub">Tracking your ride in <strong id="broNum">5</strong> seconds…</p>
+      <div class="bro-ring">
+        <svg viewBox="0 0 80 80" width="80" height="80">
+          <circle class="bro-ring-track"    cx="40" cy="40" r="34"/>
+          <circle class="bro-ring-progress" cx="40" cy="40" r="34" id="broRingProgress"/>
+        </svg>
+        <div class="bro-ring-num" id="broRingNum">5</div>
       </div>
     </div>
-    <div class="footer-bottom">
-      <p class="copyright">©2025 UrbanRide Technologies Inc.</p>
-      <span class="footer-brand">UrbanRide</span>
-    </div>
-  </footer>
+  </div>
 
-  <!-- ── Scripts ────────────────────────────────────────── -->
+  <!-- ════════════════════════════════════════════════════════════
+       MAIN PAGE (hidden until OTP verified)
+  ════════════════════════════════════════════════════════════ -->
+  <div id="mainPage" style="display:none">
+
+    <!-- ── Navbar ─────────────────────────────────────────── -->
+    <header class="navbar">
+      <div class="logo">UrbanRide</div>
+      <nav>
+        <a href="/html/index.html">Home</a>
+        <a href="/html/account.html">Account</a>
+        <a href="/html/booking.html" class="book-now">Book a Ride</a>
+      </nav>
+    </header>
+
+    <!-- ── Form ───────────────────────────────────────────── -->
+    <div class="form-container">
+      <h2>Book Your Ride</h2>
+      <p class="form-subtitle">Fill in the details below and we'll match you with a driver instantly.</p>
+
+      <form id="bookingForm" novalidate>
+
+        <!-- Guest details -->
+        <p class="form-section-title">Guest Details</p>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="guestName">Full Name *</label>
+            <input type="text" id="guestName" name="guestName" placeholder="John Smith" required />
+          </div>
+          <div class="form-group">
+            <label for="mobile">Mobile Number *</label>
+            <input type="tel" id="mobile" name="mobile" placeholder="+91 98765 43210" required readonly />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="email">Email Address</label>
+            <input type="email" id="email" name="email" placeholder="john@company.com" />
+          </div>
+          <div class="form-group">
+            <label for="passengers">No. of Passengers *</label>
+            <input type="number" id="passengers" name="passengers" min="1" max="50" placeholder="1" required />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group full-width">
+            <label for="address">Billing / Company Address</label>
+            <textarea id="address" name="address" rows="2" placeholder="123 Main Street, New Delhi 110001"></textarea>
+          </div>
+        </div>
+
+        <!-- Route -->
+        <p class="form-section-title">Route</p>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="pickup">Pickup Location *</label>
+            <input id="pickup" type="text" name="pickup" placeholder="Start typing an address…" required />
+          </div>
+          <div class="form-group">
+            <label for="dropoff">Drop-off Location *</label>
+            <input id="dropoff" type="text" name="dropoff" placeholder="Start typing an address…" required />
+          </div>
+        </div>
+
+        <!-- Trip info box -->
+        <div id="tripInfo">Route details will appear here once both locations are selected.</div>
+
+        <!-- Ride options -->
+        <p class="form-section-title">Ride Options</p>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Trip Type *</label>
+            <div class="radio-row">
+              <label class="radio-option">
+                <input type="radio" name="tripType" value="Local" required /> Local
+              </label>
+              <label class="radio-option">
+                <input type="radio" name="tripType" value="Outstation" /> Outstation
+              </label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="datetime">Date &amp; Time *</label>
+            <input type="datetime-local" id="datetime" name="datetime" required />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="vehicle">Vehicle Type *</label>
+            <select id="vehicle" name="vehicle_type" required>
+              <option value="">Select vehicle</option>
+              <option value="Sedan">Sedan</option>
+              <option value="SUV">SUV</option>
+              <option value="Luxury">Luxury</option>
+              <option value="Tempo Traveller">Tempo Traveller</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="member">Assigned Driver / Member</label>
+            <select id="member" name="associated_member">
+              <option value="">Select member</option>
+              <option value="John">John</option>
+              <option value="Priya">Priya</option>
+              <option value="Amit">Amit</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Submit -->
+        <div class="form-row">
+          <div class="form-group full-width">
+            <button type="submit" class="submit-btn" id="submitBtn">
+              <span class="btn-text">Confirm Booking →</span>
+              <span class="btn-spinner"></span>
+            </button>
+          </div>
+        </div>
+
+      </form>
+    </div>
+
+    <div id="popupMessage" class="popup-message"></div>
+
+    <!-- ── Footer ─────────────────────────────────────────── -->
+    <footer class="urbanride-footer">
+      <div class="footer-container">
+        <div class="footer-column">
+          <h4>Company</h4>
+          <ul>
+            <li><a href="#">About us</a></li>
+            <li><a href="#">Our services</a></li>
+            <li><a href="#">Blog</a></li>
+            <li><a href="#">Careers</a></li>
+          </ul>
+        </div>
+        <div class="footer-column">
+          <h4>Products</h4>
+          <ul>
+            <li><a href="#">Ride</a></li>
+            <li><a href="#">Drive</a></li>
+            <li><a href="#">Urban Auto</a></li>
+            <li><a href="#">Urban Moto</a></li>
+          </ul>
+        </div>
+        <div class="footer-column">
+          <h4>Travel</h4>
+          <ul>
+            <li><a href="#">Airports</a></li>
+            <li><a href="#">Cities</a></li>
+          </ul>
+        </div>
+        <div class="footer-column">
+          <h4>Support</h4>
+          <ul>
+            <li><a href="#">Help Center</a></li>
+            <li><a href="#">Contact us</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p class="copyright">©2025 UrbanRide Technologies Inc.</p>
+        <span class="footer-brand">UrbanRide</span>
+      </div>
+    </footer>
+
+  </div><!-- end #mainPage -->
+
+  <!-- ── Scripts ──────────────────────────────────────────── -->
   <script>
-    const BACKEND = ['localhost','127.0.0.1'].includes(window.location.hostname)
+    /* ── BACKEND ──────────────────────────────────────────── */
+    const BACKEND = ['localhost', '127.0.0.1'].includes(window.location.hostname)
       ? window.location.origin
       : 'https://urbanride.onrender.com';
+
     let pickupCoords = null;
     let dropoffCoords = null;
+    let verifiedPhone = '';
 
-    // ── Google Maps Autocomplete ──────────────────────────
+    /* ═══════════════════════════════════════════════════════
+       FIREBASE — Phone OTP (free tier, no billing needed)
+    ═══════════════════════════════════════════════════════ */
+    firebase.initializeApp({
+      apiKey:            'AIzaSyD2FTLHAoefaLDp33fPYAseWAB3m_F8Kik',
+      authDomain:        'urbanride-84afe.firebaseapp.com',
+      projectId:         'urbanride-84afe',
+      storageBucket:     'urbanride-84afe.appspot.com',
+      messagingSenderId: '302121704417',
+      appId:             '1:302121704417:web:d3e320a2232ee77411d0a0'
+    });
+    const auth = firebase.auth();
+
+    let confirmationResult = null;
+    let recaptchaVerifier  = null;
+
+    function initRecaptcha() {
+      if (recaptchaVerifier) return;
+      recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
+        size: 'invisible',
+        callback: () => {}
+      });
+      recaptchaVerifier.render();
+    }
+
+    // ── Send OTP ──────────────────────────────────────────
+    document.getElementById('sendOtpBtn').addEventListener('click', async () => {
+      const raw = document.getElementById('phoneInput').value.trim().replace(/\D/g, '');
+      const errEl = document.getElementById('phoneErr');
+      errEl.textContent = '';
+
+      if (raw.length !== 10) {
+        errEl.textContent = '⚠️ Enter a valid 10-digit mobile number.';
+        return;
+      }
+      const phoneNumber = '+91' + raw;
+      const btn = document.getElementById('sendOtpBtn');
+      btn.disabled = true;
+      btn.textContent = 'Sending…';
+
+      try {
+        initRecaptcha();
+        confirmationResult = await auth.signInWithPhoneNumber(phoneNumber, recaptchaVerifier);
+        // Switch to step 2
+        document.getElementById('otpStep1').style.display = 'none';
+        document.getElementById('otpStep2').style.display = '';
+        document.getElementById('otpPhoneDisplay').textContent = '+91 ' + raw;
+        document.querySelectorAll('.otp-digit')[0].focus();
+      } catch (err) {
+        errEl.textContent = `❌ ${err.message}`;
+        btn.disabled = false;
+        btn.textContent = 'Send OTP →';
+        // Reset recaptcha so it can be retried
+        recaptchaVerifier.clear();
+        recaptchaVerifier = null;
+      }
+    });
+
+    // ── OTP digit box UX ─────────────────────────────────
+    document.querySelectorAll('.otp-digit').forEach((input, i, all) => {
+      input.addEventListener('input', () => {
+        input.value = input.value.replace(/\D/g, '').slice(0, 1);
+        if (input.value && i < all.length - 1) all[i + 1].focus();
+      });
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Backspace' && !input.value && i > 0) all[i - 1].focus();
+      });
+    });
+
+    function getOtpValue() {
+      return [...document.querySelectorAll('.otp-digit')].map(d => d.value).join('');
+    }
+
+    // ── Verify OTP ────────────────────────────────────────
+    document.getElementById('verifyOtpBtn').addEventListener('click', verifyOtp);
+    document.querySelectorAll('.otp-digit').forEach(d => {
+      d.addEventListener('keydown', e => { if (e.key === 'Enter') verifyOtp(); });
+    });
+
+    async function verifyOtp() {
+      const code  = getOtpValue();
+      const errEl = document.getElementById('otpErr');
+      errEl.textContent = '';
+
+      if (code.length !== 6) {
+        errEl.textContent = '⚠️ Please enter all 6 digits.';
+        return;
+      }
+      const btn = document.getElementById('verifyOtpBtn');
+      btn.disabled = true;
+      btn.textContent = 'Verifying…';
+
+      try {
+        const result = await confirmationResult.confirm(code);
+        verifiedPhone = result.user.phoneNumber;   // e.g. "+919876543210"
+
+        // Pre-fill the mobile field (read-only) — strip +91 for display
+        const display = verifiedPhone.replace('+91', '').trim();
+        document.getElementById('mobile').value = verifiedPhone;
+
+        // Persist so account.html can link the session
+        localStorage.setItem('ur_phone', verifiedPhone);
+        localStorage.setItem('ur_uid',   result.user.uid);
+
+        // Hide gate, reveal form
+        document.getElementById('otpGate').style.display  = 'none';
+        document.getElementById('mainPage').style.display = 'block';
+      } catch (err) {
+        errEl.textContent = `❌ Invalid OTP — ${err.message}`;
+        btn.disabled = false;
+        btn.textContent = 'Verify & Continue →';
+      }
+    }
+
+    // ── Resend OTP ────────────────────────────────────────
+    document.getElementById('resendOtpBtn').addEventListener('click', () => {
+      document.getElementById('otpStep2').style.display = 'none';
+      document.getElementById('otpStep1').style.display = '';
+      document.getElementById('sendOtpBtn').disabled = false;
+      document.getElementById('sendOtpBtn').textContent = 'Send OTP →';
+      document.querySelectorAll('.otp-digit').forEach(d => d.value = '');
+      recaptchaVerifier = null;
+    });
+
+    // ── Skip gate if already verified this session ────────
+    const storedPhone = localStorage.getItem('ur_phone');
+    if (storedPhone) {
+      verifiedPhone = storedPhone;
+      document.getElementById('mobile').value = storedPhone;
+      document.getElementById('otpGate').style.display  = 'none';
+      document.getElementById('mainPage').style.display = 'block';
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       GOOGLE MAPS AUTOCOMPLETE
+    ═══════════════════════════════════════════════════════ */
     function initAutocomplete() {
       const pickupInput  = document.getElementById('pickup');
       const dropoffInput = document.getElementById('dropoff');
@@ -207,7 +422,7 @@
       });
     }
 
-    // ── Fetch route info from backend ─────────────────────
+    /* ── Route info ───────────────────────────────────────── */
     async function fetchTripInfo() {
       const box = document.getElementById('tripInfo');
       box.className = 'loading';
@@ -223,10 +438,8 @@
           body: JSON.stringify({ origin, destination })
         });
         box.className = '';
-
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
-
         if (data.distance && data.duration) {
           box.innerHTML =
             `📍 <strong>${data.distance}</strong> &nbsp;·&nbsp; ` +
@@ -240,7 +453,7 @@
       }
     }
 
-    // ── Toast popup ───────────────────────────────────────
+    /* ── Toast ────────────────────────────────────────────── */
     function showToast(type, text) {
       const popup = document.getElementById('popupMessage');
       popup.className = `popup-message ${type}`;
@@ -249,7 +462,30 @@
       setTimeout(() => { popup.style.display = 'none'; }, 4000);
     }
 
-    // ── Form submit ───────────────────────────────────────
+    /* ── 5-second countdown after booking ────────────────── */
+    function showBookingCountdown(destination) {
+      const overlay  = document.getElementById('bookingRedirectOverlay');
+      const ringEl   = document.getElementById('broRingProgress');
+      const numEl    = document.getElementById('broRingNum');
+      const CIRCUMF  = 213.6;
+
+      overlay.style.display = 'flex';
+      let remaining = 5;
+      numEl.textContent = remaining;
+      ringEl.style.strokeDashoffset = '0';
+
+      const timer = setInterval(() => {
+        remaining--;
+        numEl.textContent = remaining;
+        ringEl.style.strokeDashoffset = CIRCUMF * (1 - remaining / 5);
+        if (remaining <= 0) {
+          clearInterval(timer);
+          window.location.href = destination;
+        }
+      }, 1000);
+    }
+
+    /* ── Form submit ──────────────────────────────────────── */
     document.getElementById('bookingForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const form = e.target;
@@ -259,7 +495,6 @@
         showToast('error', '⚠️ Please select both pickup and drop-off from the suggestions.');
         return;
       }
-
       const tripType = document.querySelector('input[name="tripType"]:checked')?.value;
       if (!tripType) {
         showToast('error', '⚠️ Please select a trip type (Local / Outstation).');
@@ -280,7 +515,6 @@
         associated_member: form.member.value
       };
 
-      // Loading state
       btn.disabled = true;
       btn.classList.add('loading');
 
@@ -299,18 +533,15 @@
         const result = await res.json();
 
         if (result.success && result.booking?.id) {
-          showToast('success', `✅ Booking confirmed! ID: ${result.booking.id} — redirecting…`);
           form.reset();
           pickupCoords = null; dropoffCoords = null;
-          setTimeout(() => {
-            window.location.href = `/html/confirmation.html?booking_id=${result.booking.id}`;
-          }, 2500);
+          // Show 5-second countdown overlay then redirect to tracking page
+          showBookingCountdown(`/html/confirmation.html?booking_id=${result.booking.id}`);
         } else {
           throw new Error(result.error || 'Unexpected response');
         }
       } catch (err) {
         showToast('error', `❌ ${err.message}`);
-      } finally {
         btn.disabled = false;
         btn.classList.remove('loading');
       }

@@ -332,3 +332,243 @@ textarea { resize: vertical; min-height: 90px; }
   .form-group { min-width: 100%; }
   .radio-row { flex-direction: row; }
 }
+
+/* ─────────────────────────────────────────────────────────
+   OTP Gate overlay
+   ───────────────────────────────────────────────────────── */
+.otp-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+.otp-card {
+  background: #fff;
+  border-radius: 20px;
+  padding: 2.5rem 2rem;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 24px 80px rgba(0,0,0,.45);
+  animation: otpSlideIn .45s cubic-bezier(.22,1,.36,1);
+}
+
+@keyframes otpSlideIn {
+  from { opacity: 0; transform: translateY(28px) scale(.97); }
+  to   { opacity: 1; transform: none; }
+}
+
+.otp-logo {
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -.5px;
+  color: #000;
+  text-align: center;
+  margin-bottom: .4rem;
+}
+
+.otp-tagline {
+  text-align: center;
+  font-size: .88rem;
+  color: #6b7280;
+  margin-bottom: 2rem;
+  line-height: 1.5;
+}
+.otp-tagline strong { color: #000; }
+
+/* Phone row */
+.otp-input-wrap {
+  display: flex;
+  align-items: center;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 1.25rem;
+  transition: border-color .2s;
+}
+.otp-input-wrap:focus-within { border-color: #000; box-shadow: 0 0 0 3px rgba(0,0,0,.07); }
+
+.otp-prefix {
+  padding: .72rem .85rem;
+  font-size: .95rem;
+  font-weight: 600;
+  color: #374151;
+  background: #f9fafb;
+  border-right: 1.5px solid #e5e7eb;
+  white-space: nowrap;
+}
+.otp-input-wrap input {
+  flex: 1;
+  border: none !important;
+  box-shadow: none !important;
+  background: #fff !important;
+  border-radius: 0 !important;
+  padding: .72rem .9rem !important;
+  font-size: .95rem;
+}
+
+/* OTP digit boxes */
+.otp-digits {
+  display: flex;
+  gap: .5rem;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+.otp-digit {
+  width: 46px !important;
+  height: 54px !important;
+  text-align: center;
+  font-size: 1.4rem !important;
+  font-weight: 700;
+  border: 1.5px solid #e5e7eb !important;
+  border-radius: 10px !important;
+  padding: 0 !important;
+  min-width: 0 !important;
+  caret-color: transparent;
+  transition: border-color .2s, box-shadow .2s;
+}
+.otp-digit:focus {
+  border-color: #000 !important;
+  box-shadow: 0 0 0 3px rgba(0,0,0,.08) !important;
+  background: #fff !important;
+}
+
+/* Buttons */
+.otp-btn {
+  width: 100%;
+  padding: .85rem 1rem;
+  background: #000;
+  color: #fff;
+  font-size: .95rem;
+  font-weight: 700;
+  font-family: var(--font);
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  letter-spacing: .2px;
+  margin-bottom: .75rem;
+  transition: opacity .2s, transform .15s;
+}
+.otp-btn:hover:not(:disabled) { opacity: .85; transform: translateY(-1px); }
+.otp-btn:disabled { opacity: .45; cursor: not-allowed; }
+
+.otp-back {
+  width: 100%;
+  padding: .65rem;
+  background: none;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 10px;
+  font-size: .88rem;
+  font-weight: 600;
+  color: #6b7280;
+  cursor: pointer;
+  font-family: var(--font);
+  transition: border-color .2s, color .2s;
+}
+.otp-back:hover { border-color: #9ca3af; color: #374151; }
+
+.otp-note {
+  font-size: .78rem;
+  color: #9ca3af;
+  text-align: center;
+  margin-bottom: .75rem;
+  line-height: 1.4;
+}
+
+.otp-err {
+  font-size: .82rem;
+  color: #dc2626;
+  text-align: center;
+  min-height: 1.2em;
+  margin-top: .25rem;
+}
+
+/* reCAPTCHA container — keep invisible */
+#recaptcha-container { display: none; }
+
+/* ─────────────────────────────────────────────────────────
+   Post-booking redirect overlay (5-second countdown)
+   ───────────────────────────────────────────────────────── */
+.booking-redirect-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9500;
+  background: rgba(0,0,0,.88);
+  backdrop-filter: blur(16px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: otpSlideIn .4s ease;
+}
+
+.bro-card {
+  text-align: center;
+  padding: 2.5rem 2rem;
+  max-width: 320px;
+}
+
+.bro-icon {
+  font-size: 3.5rem;
+  display: block;
+  margin-bottom: 1rem;
+  animation: bounceIn .6s cubic-bezier(.36,.07,.19,.97);
+}
+
+@keyframes bounceIn {
+  0%   { transform: scale(.3); opacity: 0; }
+  50%  { transform: scale(1.1); opacity: 1; }
+  80%  { transform: scale(.95); }
+  100% { transform: scale(1); }
+}
+
+.bro-card h2 {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: .5rem;
+  letter-spacing: -.3px;
+}
+
+.bro-sub {
+  font-size: .9rem;
+  color: rgba(255,255,255,.6);
+  margin-bottom: 1.75rem;
+  line-height: 1.5;
+}
+.bro-sub strong { color: #22c55e; }
+
+/* Countdown ring (same structure as confirmation.css) */
+.bro-ring {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto;
+}
+.bro-ring svg { transform: rotate(-90deg); }
+
+.bro-ring-track {
+  fill: none;
+  stroke: rgba(255,255,255,.1);
+  stroke-width: 5;
+}
+.bro-ring-progress {
+  fill: none;
+  stroke: #22c55e;
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-dasharray: 213.6;
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset 1s linear;
+}
+.bro-ring-num {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1.65rem;
+  font-weight: 800;
+  color: #fff;
+}

@@ -466,19 +466,42 @@
         showToast(`🚖 New ride — #${booking.id} from ${booking.guest_name}`);
       });
 
-      // Ride actioned by another session (or rider cancel)
+      // Ride actioned by another session OR cancelled by rider
       socket.on('ride_actioned', ({ id, status, ride }) => {
+        // ── Case 1: still in the pending column ──────────────────────
         const card = document.getElementById('pendingCol').querySelector(`[data-id="${id}"]`);
         if (card) {
+          // Extract route data before we remove the card
+          const rideData = ride || {
+            id,
+            guest_name: card.querySelector('.guest-name')?.textContent,
+            pickup:  card.querySelectorAll('.route-point')[0]?.querySelector('span:last-child')?.textContent,
+            dropoff: card.querySelectorAll('.route-point')[1]?.querySelector('span:last-child')?.textContent
+          };
           card.classList.add('fade-out');
           card.addEventListener('animationend', () => { card.remove(); toggleEmpties(); }, { once: true });
           stats.pending = Math.max(0, stats.pending - 1);
+
+          if (status === 'accepted' && !activeRideId) {
+            stats.accepted++;
+            showActiveBanner(rideData);
+          } else if (status !== 'accepted') {
+            // cancelled, rejected, open_market → show in Recent Actions
+            prependActionedCard(rideData, status);
+            if (status === 'rejected') stats.rejected++;
+            if (status === 'cancelled') showToast(`🚫 Ride #${id} was cancelled by the rider`);
+          }
           updateStats();
         }
-        if (status === 'accepted' && ride && !activeRideId) {
-          stats.accepted++;
-          showActiveBanner(ride);
+
+        // ── Case 2: rider cancelled a ride currently IN PROGRESS ─────
+        if (status === 'cancelled' && String(id) === String(activeRideId)) {
+          const ended = activeRide || ride || { id, guest_name: `Ride #${id}`, pickup: '—', dropoff: '—' };
+          clearActiveBanner();
+          stats.accepted = Math.max(0, stats.accepted - 1);
           updateStats();
+          prependActionedCard(ended, 'cancelled');
+          showToast(`🚫 Rider cancelled Ride #${id} — ride removed`);
         }
       });
 
