@@ -122,8 +122,10 @@
   ════════════════════════════════════════════ -->
   <script>
     const BACKEND = 'https://urbanride.onrender.com';
-    let token  = '';
-    let socket = null;
+    let token       = '';
+    let socket      = null;
+    let pollTimer   = null;   // HTTP fallback — runs until Socket.io goes live
+    let socketLive  = false;
 
     // ── Stats counters ────────────────────────────────────
     const stats = { pending: 0, accepted: 0, rejected: 0, total: 0 };
@@ -328,6 +330,42 @@
       }
     }
 
+    // ── HTTP fallback poll (runs until Socket.io authenticates) ──────────────
+    // Merges any pending rides not already displayed into the Incoming column.
+    // Stops the moment vendor_auth comes back ok — Socket.io takes over from there.
+    function startPolling() {
+      if (pollTimer) return;
+      pollTimer = setInterval(async () => {
+        if (socketLive) { clearInterval(pollTimer); pollTimer = null; return; }
+        try {
+          const res = await fetch(`${BACKEND}/api/vendor/rides`, {
+            headers: { 'x-vendor-token': token }
+          });
+          if (!res.ok) return;
+          const { pending } = await res.json();
+          const col = document.getElementById('pendingCol');
+          let added = 0;
+          pending.forEach(r => {
+            if (!col.querySelector(`[data-id="${r.id}"]`)) {
+              document.getElementById('pendingEmpty').style.display = 'none';
+              col.appendChild(buildPendingCard(r));
+              added++;
+            }
+          });
+          if (added > 0) {
+            stats.pending = col.querySelectorAll('.ride-card').length;
+            stats.total   = stats.pending + stats.accepted + stats.rejected;
+            updateStats();
+          }
+        } catch (_) {}
+      }, 6000);   // every 6 s while not yet live
+    }
+
+    function stopPolling() {
+      clearInterval(pollTimer);
+      pollTimer = null;
+    }
+
     // ── Socket.io ─────────────────────────────────────────
     function connectSocket() {
       socket = io(BACKEND, { transports: ['websocket', 'polling'] });
@@ -338,6 +376,8 @@
 
       socket.on('vendor_auth', ({ ok }) => {
         if (ok) {
+          socketLive = true;
+          stopPolling();
           document.getElementById('rtDot').classList.add('live');
           document.getElementById('rtLabel').textContent = 'Live';
         }
@@ -369,8 +409,10 @@
       });
 
       socket.on('disconnect', () => {
+        socketLive = false;
         document.getElementById('rtDot').classList.remove('live');
         document.getElementById('rtLabel').textContent = 'Reconnecting…';
+        startPolling();   // resume HTTP fallback while socket reconnects
       });
     }
 
@@ -397,6 +439,7 @@
 
         loadRides();
         connectSocket();
+        startPolling();   // HTTP fallback until socket goes live
       } catch (err) {
         document.getElementById('loginError').textContent = 'Connection failed — is the server running?';
         document.getElementById('loginError').style.display = 'block';
@@ -412,6 +455,8 @@
     document.getElementById('logoutBtn').addEventListener('click', () => {
       sessionStorage.removeItem('vendorToken');
       if (socket) socket.disconnect();
+      stopPolling();
+      socketLive = false;
       document.getElementById('dashboard').style.display   = 'none';
       document.getElementById('loginScreen').style.display = 'flex';
       document.getElementById('passwordInput').value = '';
