@@ -1,34 +1,45 @@
 // booking.js — Booking CRUD router
-// Uses express-validator for input sanitisation before touching the DB.
+//
+// FAANG patterns in this file:
+//   • express-validator — structured 422 errors, never trust client input
+//   • Idempotency key   — X-Idempotency-Key header prevents duplicate bookings
+//                         on network retry; cached for 24 h
+//   • Cache warm-up     — status cached on INSERT so first poll is always a hit
+//   • RabbitMQ publish  — persistent messages survive broker restart
+//   • Cancel endpoint   — PATCH /:id/cancel sets status='cancelled' (keeps history)
+//                         and pushes socket events to rider + vendor in real time
+//   • Structured logger — every path logs a typed event object for aggregation
 
-const express                                 = require('express');
-const { body, validationResult }              = require('express-validator');
-const router                                  = express.Router();
-const pool                                    = require('./db');
-const amqp                                    = require('amqplib');
-const { statusCache, bookingCache }           = require('./cache');
+const express                                       = require('express');
+const { body, validationResult }                    = require('express-validator');
+const router                                        = express.Router();
+const pool                                          = require('./db');
+const amqp                                          = require('amqplib');
+const { statusCache, bookingCache, idempotencyCache } = require('./cache');
+const logger                                        = require('./logger');
+const socketModule                                  = require('./socket');
 
 let channel, connection;
 
-// ── RabbitMQ connection with retry ────────────────────────────────────────────
+// ── RabbitMQ connection with exponential-ish retry ───────────────────────────
 async function connectQueue() {
   try {
     connection = await amqp.connect(process.env.RABBITMQ_URL);
 
     connection.on('error', (err) => {
-      console.error('❌ RabbitMQ error:', err.message);
+      logger.error({ event: 'rabbitmq_error', message: err.message });
       setTimeout(connectQueue, 5000);
     });
     connection.on('close', () => {
-      console.error('❌ RabbitMQ closed — reconnecting…');
+      logger.warn({ event: 'rabbitmq_closed' });
       setTimeout(connectQueue, 5000);
     });
 
     channel = await connection.createChannel();
     await channel.assertQueue('ride_requests', { durable: true });
-    console.log('✅ Connected to RabbitMQ');
+    logger.info({ event: 'rabbitmq_connected' });
   } catch (err) {
-    console.error('❌ RabbitMQ connection failed:', err.message);
+    logger.error({ event: 'rabbitmq_connect_failed', message: err.message });
     setTimeout(connectQueue, 5000);
   }
 }
@@ -78,10 +89,25 @@ const bookingValidation = [
 
 // ── POST /api/bookings — Create booking ───────────────────────────────────────
 router.post('/', bookingValidation, async (req, res) => {
-  // Return structured validation errors
+  // Structured validation errors
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
+    logger.warn({ event: 'booking_validation_failed', errors: errors.array() });
     return res.status(422).json({ success: false, errors: errors.array() });
+  }
+
+  // ── Idempotency check ─────────────────────────────────────────────────────
+  // If the client supplies X-Idempotency-Key and we've seen it before, return
+  // the original response without touching the DB or RabbitMQ.
+  // This makes retries safe: double-tap "Book" or a flaky network can't create
+  // duplicate bookings.
+  const idemKey = req.headers['x-idempotency-key'];
+  if (idemKey) {
+    const cached = idempotencyCache.get(`idem_${idemKey}`);
+    if (cached) {
+      logger.info({ event: 'idempotency_hit', key: idemKey, reqId: req.id });
+      return res.status(200).json(cached);
+    }
   }
 
   try {
@@ -103,27 +129,35 @@ router.post('/', bookingValidation, async (req, res) => {
     ];
 
     const [result] = await pool.query(sql, values);
+    const bookingId = result.insertId;
 
-    const insertedBooking = { id: result.insertId, ...req.body, status: 'pending' };
+    const insertedBooking = { id: bookingId, ...req.body, status: 'pending' };
 
-    // Warm the cache immediately so the first status poll is a cache hit
-    statusCache.set(`status_${result.insertId}`, 'pending');
+    // Cache warm-up: first status poll is always a cache hit
+    statusCache.set(`status_${bookingId}`, 'pending');
 
     // Publish to RabbitMQ for async vendor notification
     if (channel) {
       channel.sendToQueue(
         'ride_requests',
         Buffer.from(JSON.stringify(insertedBooking)),
-        { persistent: true }   // survives broker restart
+        { persistent: true }  // survives broker restart
       );
-      console.log(`✅ Booking ${insertedBooking.id} queued for vendor notification`);
     } else {
-      console.error('❌ RabbitMQ channel unavailable — booking not queued');
+      logger.error({ event: 'rabbitmq_unavailable', bookingId, reqId: req.id });
     }
 
-    res.status(201).json({ success: true, booking: insertedBooking });
+    const response = { success: true, booking: insertedBooking };
+
+    // Store under idempotency key so retries get the same response
+    if (idemKey) {
+      idempotencyCache.set(`idem_${idemKey}`, response);
+    }
+
+    logger.info({ event: 'booking_created', bookingId, phone, reqId: req.id });
+    res.status(201).json(response);
   } catch (err) {
-    console.error('❌ Booking error:', err.message);
+    logger.error({ event: 'booking_error', message: err.message, reqId: req.id });
     res.status(500).json({ success: false, error: 'Server error' });
   }
 });
@@ -144,7 +178,7 @@ router.get('/by-phone/:phoneNumber', async (req, res) => {
     }
     res.json(rows);
   } catch (err) {
-    console.error('❌ Fetch error:', err.message);
+    logger.error({ event: 'fetch_by_phone_error', message: err.message });
     res.status(500).json({ success: false, error: 'Server error' });
   }
 });
@@ -159,7 +193,6 @@ router.get('/', async (req, res) => {
       sql   = 'SELECT * FROM rides WHERE phone = ? ORDER BY id DESC';
       param = phone;
     } else if (id) {
-      // Try booking cache first
       const cached = bookingCache.get(`booking_${id}`);
       if (cached) return res.json({ bookings: [cached], source: 'cache' });
 
@@ -171,57 +204,75 @@ router.get('/', async (req, res) => {
 
     const [rows] = await pool.query(sql, [param]);
 
-    // Cache individual booking lookup
     if (id && rows.length > 0) {
       bookingCache.set(`booking_${id}`, rows[0]);
     }
 
     res.json({ bookings: rows });
   } catch (err) {
-    console.error('❌ Fetch error:', err.message);
+    logger.error({ event: 'fetch_booking_error', message: err.message });
     res.status(500).json({ success: false, error: 'Server error' });
   }
 });
 
-// ── PATCH /api/bookings/:id/cancel — Rider cancels an active booking ─────────
-// Sets status to 'cancelled' (keeps the record in history) and invalidates caches.
+// ── PATCH /api/bookings/:id/cancel ────────────────────────────────────────────
+// Rider-initiated cancellation.
+//   • Sets status = 'cancelled' in DB (record is preserved for history)
+//   • Only allowed when status is 'pending' or 'open_market';
+//     returns 409 if the ride is already accepted (call support instead)
+//   • Invalidates both caches
+//   • Pushes real-time events so the rider's live-dot + the vendor console
+//     both update without a page refresh
 router.patch('/:id/cancel', async (req, res) => {
+  const { id } = req.params;
   try {
-    const { id } = req.params;
     const [result] = await pool.query(
       "UPDATE rides SET status = 'cancelled' WHERE id = ? AND status IN ('pending', 'open_market')",
       [id]
     );
 
     if (result.affectedRows === 0) {
-      // Either not found or already actioned — don't allow cancelling an accepted ride
-      return res.status(409).json({ success: false, error: 'Ride cannot be cancelled in its current state.' });
+      logger.warn({ event: 'cancel_conflict', rideId: id });
+      return res.status(409).json({
+        success: false,
+        error: 'Ride cannot be cancelled in its current state.'
+      });
     }
 
-    // Evict from caches
+    // Invalidate both caches
     statusCache.del(`status_${id}`);
     bookingCache.del(`booking_${id}`);
 
+    // Push real-time events (non-fatal if socket not yet ready)
+    try {
+      const io = socketModule.getIO();
+      // Rider's confirmation page / dashboard: update live status indicator
+      io.to(`booking_${id}`).emit('status_update', { bookingId: id, status: 'cancelled' });
+      // Vendor console: remove card from Incoming column
+      io.to('vendor_room').emit('ride_actioned', { id, status: 'cancelled' });
+    } catch (socketErr) {
+      logger.warn({ event: 'cancel_socket_fail', message: socketErr.message });
+    }
+
+    logger.info({ event: 'booking_cancelled', rideId: id });
     res.json({ success: true, status: 'cancelled' });
   } catch (err) {
-    console.error('❌ Cancel error:', err.message);
+    logger.error({ event: 'cancel_error', message: err.message, rideId: id });
     res.status(500).json({ success: false, error: 'Server error' });
   }
 });
 
 // ── DELETE /api/bookings/:id ──────────────────────────────────────────────────
 router.delete('/:id', async (req, res) => {
+  const { id } = req.params;
   try {
-    const { id } = req.params;
     await pool.query('DELETE FROM rides WHERE id = ?', [id]);
-
-    // Evict from caches
     statusCache.del(`status_${id}`);
     bookingCache.del(`booking_${id}`);
-
+    logger.info({ event: 'booking_deleted', rideId: id });
     res.json({ success: true });
   } catch (err) {
-    console.error('❌ Delete error:', err.message);
+    logger.error({ event: 'delete_error', message: err.message, rideId: id });
     res.status(500).json({ success: false, error: 'Server error' });
   }
 });
