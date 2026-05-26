@@ -427,6 +427,12 @@
           headers: { 'x-vendor-token': pwd }
         });
         if (res.status === 401) {
+          document.getElementById('loginError').textContent = 'Incorrect password — try again.';
+          document.getElementById('loginError').style.display = 'block';
+          return;
+        }
+        if (!res.ok) {
+          document.getElementById('loginError').textContent = `Server error (${res.status}) — check Render deployment.`;
           document.getElementById('loginError').style.display = 'block';
           return;
         }
