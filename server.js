@@ -218,41 +218,6 @@ app.post('/api/vendor/respond/:id', vendorAuth, async (req, res) => {
 // ── Booking CRUD ──────────────────────────────────────────────────────────────
 app.use('/api/bookings', bookingLimiter, bookingRoutes);
 
-// ── Telegram webhook ──────────────────────────────────────────────────────────
-app.post('/telegram-update', async (req, res) => {
-  const message = req.body?.message;
-  if (!message?.text) return res.sendStatus(200);
-
-  const chatId = message.chat.id;
-  const match  = message.text.trim().match(/^\/(accept|reject|openmarket)_(\d+)$/);
-  if (!match) return res.sendStatus(200);
-
-  const [, action, bookingId] = match;
-  const newStatus =
-    action === 'accept'     ? 'accepted'    :
-    action === 'reject'     ? 'rejected'    :
-    action === 'openmarket' ? 'open_market' : null;
-
-  if (!newStatus) return res.sendStatus(400);
-
-  try {
-    await db.query('UPDATE rides SET status = ? WHERE id = ?', [newStatus, bookingId]);
-    statusCache.del(`status_${bookingId}`);
-    bookingCache.del(`booking_${bookingId}`);
-    io.to(`booking_${bookingId}`).emit('status_update', { bookingId, status: newStatus });
-
-    await axios.post(
-      `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`,
-      { chat_id: chatId, text: `✅ Booking ${bookingId} marked as *${newStatus}*`, parse_mode: 'Markdown' }
-    );
-
-    return res.sendStatus(200);
-  } catch (err) {
-    logger.error({ event: 'telegram_webhook_error', message: err.message });
-    return res.sendStatus(500);
-  }
-});
-
 // ── Socket.io ─────────────────────────────────────────────────────────────────
 io.on('connection', (socket) => {
   logger.info({ event: 'socket_connected', socketId: socket.id });
