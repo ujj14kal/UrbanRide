@@ -280,39 +280,6 @@ app.post('/api/vendor/end-ride/:id', vendorAuth, async (req, res) => {
   }
 });
 
-// PATCH /api/bookings/:id/cancel — rider cancels their own booking
-// Works on pending OR accepted rides. Emits real-time events to both
-// the rider's socket room and the vendor console.
-app.patch('/api/bookings/:id/cancel', async (req, res) => {
-  const { id } = req.params;
-  try {
-    // Only allow cancelling rides that aren't already finished
-    const [rows] = await db.query(
-      "SELECT * FROM rides WHERE id = ? AND status NOT IN ('completed','rejected','cancelled')",
-      [id]
-    );
-    if (rows.length === 0) {
-      return res.status(404).json({ error: 'Booking not found or already finalised.' });
-    }
-    const ride = rows[0];
-
-    await db.query("UPDATE rides SET status = 'cancelled' WHERE id = ?", [id]);
-    statusCache.del(`status_${id}`);
-    bookingCache.del(`booking_${id}`);
-
-    // Notify rider page (real-time status change)
-    io.to(`booking_${id}`).emit('status_update', { bookingId: id, status: 'cancelled' });
-    // Notify vendor console — remove from pending/active, show in recent
-    io.to('vendor_room').emit('ride_actioned', { id, status: 'cancelled', ride });
-
-    logger.info({ event: 'ride_cancelled', rideId: id, reqId: req.id });
-    res.json({ success: true, status: 'cancelled' });
-  } catch (err) {
-    logger.error({ event: 'cancel_ride_error', message: err.message, reqId: req.id });
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
 // ── Booking CRUD ──────────────────────────────────────────────────────────────
 app.use('/api/bookings', bookingLimiter, bookingRoutes);
 

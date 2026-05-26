@@ -9,8 +9,8 @@
   <link rel="icon" type="image/png" href="/images/ur.png">
 
   <!-- Firebase SDKs (free — no billing required) -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-auth-compat.js"></script>
 </head>
 
 <body>
@@ -386,14 +386,27 @@
       recaptchaVerifier = null;
     });
 
-    // ── Skip gate if already verified this session ────────
-    const storedPhone = localStorage.getItem('ur_phone');
-    if (storedPhone) {
-      verifiedPhone = storedPhone;
-      document.getElementById('mobile').value = storedPhone;
-      document.getElementById('otpGate').style.display  = 'none';
-      document.getElementById('mainPage').style.display = 'block';
-    }
+    // ── Gate control via Firebase auth state ────────────────
+    // onAuthStateChanged fires once Firebase has restored its
+    // session from IndexedDB (async).  If the user is already
+    // signed in we skip the OTP gate; otherwise we keep it visible.
+    auth.onAuthStateChanged((user) => {
+      if (user && user.phoneNumber) {
+        // Already authenticated — skip gate, pre-fill phone
+        verifiedPhone = user.phoneNumber;
+        document.getElementById('mobile').value = user.phoneNumber;
+        localStorage.setItem('ur_phone', user.phoneNumber);
+        localStorage.setItem('ur_uid',   user.uid);
+        document.getElementById('otpGate').style.display  = 'none';
+        document.getElementById('mainPage').style.display = 'block';
+      } else {
+        // Not signed in — clear any stale localStorage and show gate
+        localStorage.removeItem('ur_phone');
+        localStorage.removeItem('ur_uid');
+        document.getElementById('otpGate').style.display  = 'flex';
+        document.getElementById('mainPage').style.display = 'none';
+      }
+    });
 
     /* ═══════════════════════════════════════════════════════
        GOOGLE MAPS AUTOCOMPLETE

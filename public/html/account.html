@@ -25,10 +25,27 @@
     </nav>
   </header>
 
+  <!-- ── Firebase loading veil (shown until auth state resolves) ── -->
+  <div id="authLoadingVeil" style="
+    position:fixed;inset:0;z-index:9999;
+    background:#0a0a0a;
+    display:flex;align-items:center;justify-content:center;
+    flex-direction:column;gap:1rem;">
+    <div style="font-size:1.5rem;font-weight:800;color:#fff;letter-spacing:-.5px;">UrbanRide</div>
+    <div style="
+      width:32px;height:32px;
+      border:3px solid rgba(255,255,255,.15);
+      border-top-color:#22c55e;
+      border-radius:50%;
+      animation:veilSpin .7s linear infinite;">
+    </div>
+    <style>@keyframes veilSpin{to{transform:rotate(360deg)}}</style>
+  </div>
+
   <!-- ══════════════════════════════════════════════════════
        AUTH SECTION  (hidden once verified)
   ══════════════════════════════════════════════════════ -->
-  <section class="auth-section" id="authSection">
+  <section class="auth-section" id="authSection" style="display:none">
     <div class="auth-card">
 
       <!-- Step 1: Phone -->
@@ -568,9 +585,9 @@
       // Clear the booking-page OTP gate skip too
       localStorage.removeItem('ur_phone');
       localStorage.removeItem('ur_uid');
-      dashSection.style.display = 'none';
-      authSection.style.display = 'flex';
-      phoneForm.style.display   = 'block';
+      dashSection.style.display  = 'none';
+      authSection.style.display  = 'flex';
+      phoneForm.style.display    = 'block';
       otpForm.style.display     = 'none';
       document.getElementById('phoneInput').value = '';
       document.getElementById('otpInput').value   = '';
@@ -581,17 +598,21 @@
       historyList.innerHTML = '<div class="panel-empty" id="histEmpty">No past rides yet.</div>';
     });
 
-    // ── Auto-login if Firebase session already exists ─────
-    // Fires immediately on page load — if the user verified OTP
-    // in a previous visit, Firebase restores the session from
-    // IndexedDB and this callback receives the user object.
+    // ── Auth state gate — fires once Firebase restores session ──
+    // The loading veil hides everything until this resolves,
+    // so the user never sees the auth form flash on refresh.
     auth.onAuthStateChanged((user) => {
+      const veil = document.getElementById('authLoadingVeil');
+      if (veil) veil.style.display = 'none';   // always remove veil
+
       if (user && user.phoneNumber && !currentPhone) {
         currentPhone = user.phoneNumber;
-        // Keep localStorage in sync so booking page gate is also skipped
         localStorage.setItem('ur_phone', currentPhone);
         localStorage.setItem('ur_uid',   user.uid);
         showDashboard(currentPhone);
+      } else if (!user) {
+        // Not signed in — show the auth form
+        authSection.style.display = 'flex';
       }
     });
 

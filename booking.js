@@ -173,9 +173,7 @@ router.get('/by-phone/:phoneNumber', async (req, res) => {
       'SELECT * FROM rides WHERE phone = ? ORDER BY id DESC',
       [phoneNumber]
     );
-    if (rows.length === 0) {
-      return res.status(404).json({ success: false, message: 'No bookings found for this number.' });
-    }
+    // Return empty array (not 404) — caller handles the empty state
     res.json(rows);
   } catch (err) {
     logger.error({ event: 'fetch_by_phone_error', message: err.message });
