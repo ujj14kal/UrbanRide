@@ -14,13 +14,40 @@ const PDFDocument = require('pdfkit');
 const path        = require('path');
 const logger      = require('./logger');
 
-// ── Lazy transporter ──────────────────────────────────────────────────────────
+// ── Transporter (created once, reused) ───────────────────────────────────────
+// Gmail SMTP requires an App Password, NOT your regular login password.
+// Steps to generate one (free):
+//   1. Go to myaccount.google.com → Security
+//   2. Enable 2-Step Verification (if not already on)
+//   3. Search "App passwords" in the search bar
+//   4. Create one → name it "UrbanRide" → copy the 16-char code
+//   5. Set EMAIL_PASS to that code (no spaces) in your .env / Render env vars
+let _transporter = null;
 function makeTransporter() {
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) return null;
-  return nodemailer.createTransport({
+  if (_transporter) return _transporter;
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    logger.warn({ event: 'email_not_configured', reason: 'EMAIL_USER or EMAIL_PASS missing' });
+    return null;
+  }
+  _transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
   });
+  // Verify SMTP connection at startup so misconfiguration appears in logs immediately
+  _transporter.verify((err) => {
+    if (err) {
+      logger.error({
+        event: 'email_smtp_verify_failed',
+        message: err.message,
+        hint: 'Make sure EMAIL_PASS is a Gmail App Password, not your login password. ' +
+              'Generate at: myaccount.google.com → Security → App passwords'
+      });
+      _transporter = null;   // reset so next call retries
+    } else {
+      logger.info({ event: 'email_smtp_ready', user: process.env.EMAIL_USER });
+    }
+  });
+  return _transporter;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
