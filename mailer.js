@@ -277,13 +277,35 @@ function buildInvoiceBuffer(booking) {
   });
 }
 
-// ── HTML email body ───────────────────────────────────────────────────────────
+// ── HTML email body (table-based, all styles inline — works in Gmail/iOS/Outlook)
 function buildHtml(booking) {
-  const dt = booking.date_time
+  const dt  = booking.date_time
     ? new Date(booking.date_time).toLocaleString('en-IN', { dateStyle: 'long', timeStyle: 'short' })
     : '—';
-
   const ref = bookingRef(booking.id);
+
+  const driverRow = booking.associated_member ? `
+    <tr><td style="padding:0 32px">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0"
+             style="border:1px solid #e5e7eb;border-radius:10px;background:#f9fafb">
+        <tr>
+          <td width="48" style="padding:14px 0 14px 14px;vertical-align:middle">
+            <table cellpadding="0" cellspacing="0" border="0">
+              <tr><td width="40" height="40" align="center" valign="middle"
+                      style="background:#e5e7eb;border-radius:50%;font-size:16px;font-weight:700;color:#374151">
+                ${booking.associated_member.charAt(0).toUpperCase()}
+              </td></tr>
+            </table>
+          </td>
+          <td style="padding:14px;vertical-align:middle">
+            <div style="font-size:13px;font-weight:600;color:#111827">${booking.associated_member}</div>
+            <div style="font-size:11px;color:#9ca3af;margin-top:2px">Your UrbanRide driver</div>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+    <tr><td style="padding:0 32px"><div style="height:1px;background:#f3f4f6;margin:20px 0"></div></td></tr>
+  ` : '';
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -291,166 +313,194 @@ function buildHtml(booking) {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Your UrbanRide Receipt</title>
-<style>
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;background:#f0f2f5;color:#1f2937;-webkit-font-smoothing:antialiased}
-  .wrap{max-width:560px;margin:32px auto;border-radius:16px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.12)}
-  /* Header */
-  .hdr{background:#0a0a0a;padding:28px 32px;display:flex;align-items:center;justify-content:space-between}
-  .hdr-brand{display:flex;align-items:center;gap:10px}
-  .hdr-icon{width:38px;height:38px;background:#16a34a;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:#fff;letter-spacing:-1px}
-  .hdr-name{font-size:18px;font-weight:700;color:#fff}
-  .hdr-tagline{font-size:11px;color:#6b7280;margin-top:2px}
-  .hdr-right{text-align:right}
-  .hdr-invoice{font-size:11px;font-weight:700;letter-spacing:2px;color:#6b7280;text-transform:uppercase}
-  .hdr-ref{font-size:20px;font-weight:800;color:#fff;margin-top:3px}
-  /* Green stripe */
-  .stripe{height:4px;background:linear-gradient(90deg,#16a34a,#22c55e)}
-  /* Status bar */
-  .status-bar{background:#f9fafb;border-bottom:1px solid #e5e7eb;padding:14px 32px;display:flex;align-items:center;gap:8px}
-  .status-dot{width:9px;height:9px;background:#16a34a;border-radius:50%;box-shadow:0 0 0 3px rgba(22,163,74,.2)}
-  .status-text{font-size:12px;font-weight:700;color:#166534;text-transform:uppercase;letter-spacing:.5px}
-  .status-date{margin-left:auto;font-size:12px;color:#6b7280}
-  /* Body */
-  .body{background:#fff;padding:28px 32px}
-  /* Section header */
-  .sec-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#9ca3af;margin-bottom:14px}
-  /* Info grid */
-  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
-  .info-item .lbl{font-size:11px;color:#9ca3af;margin-bottom:3px}
-  .info-item .val{font-size:14px;font-weight:600;color:#111827}
-  /* Route block */
-  .route-card{background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:20px;margin-bottom:24px;position:relative}
-  .route-row{display:flex;align-items:flex-start;gap:14px}
-  .route-icon{flex-shrink:0;width:32px;display:flex;flex-direction:column;align-items:center}
-  .dot-green{width:10px;height:10px;background:#16a34a;border-radius:50%;margin-top:3px}
-  .dot-black{width:10px;height:10px;background:#111827;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 2px #111827;margin-top:3px}
-  .route-line{flex:1;width:2px;background:repeating-linear-gradient(180deg,#d1d5db 0,#d1d5db 4px,transparent 4px,transparent 8px);margin:6px 0;min-height:20px}
-  .route-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#16a34a;margin-bottom:3px}
-  .route-label.drop{color:#374151}
-  .route-addr{font-size:13px;font-weight:600;color:#111827;line-height:1.4}
-  /* Driver */
-  .driver-row{display:flex;align-items:center;gap:12px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:14px;margin-bottom:24px}
-  .driver-avatar{width:40px;height:40px;background:#e5e7eb;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#374151;flex-shrink:0}
-  .driver-name{font-size:13px;font-weight:600;color:#111827}
-  .driver-sub{font-size:11px;color:#9ca3af;margin-top:2px}
-  /* Thank-you banner */
-  .thankyou{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:16px 20px;text-align:center;margin-bottom:8px}
-  .thankyou-title{font-size:15px;font-weight:700;color:#166534}
-  .thankyou-sub{font-size:12px;color:#4ade80;margin-top:4px;color:#16a34a}
-  /* PDF note */
-  .pdf-note{text-align:center;font-size:11px;color:#9ca3af;padding:12px 0 4px}
-  /* Footer */
-  .foot{background:#0a0a0a;padding:18px 32px;text-align:center;font-size:11px;color:#4b5563}
-  .foot a{color:#6b7280;text-decoration:none}
-  /* Divider */
-  .divider{border:none;border-top:1px solid #f3f4f6;margin:20px 0}
-</style>
 </head>
-<body>
-<div class="wrap">
+<body style="margin:0;padding:0;background:#f0f2f5;font-family:Arial,Helvetica,sans-serif">
 
-  <!-- Header -->
-  <div class="hdr">
-    <div class="hdr-brand">
-      <div class="hdr-icon">U</div>
-      <div>
-        <div class="hdr-name">UrbanRide</div>
-        <div class="hdr-tagline">Premium Cab Service</div>
-      </div>
-    </div>
-    <div class="hdr-right">
-      <div class="hdr-invoice">Invoice</div>
-      <div class="hdr-ref">${ref}</div>
-    </div>
-  </div>
-  <div class="stripe"></div>
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f0f2f5">
+<tr><td align="center" style="padding:32px 16px">
 
-  <!-- Status bar -->
-  <div class="status-bar">
-    <div class="status-dot"></div>
-    <div class="status-text">Ride Completed</div>
-    <div class="status-date">${dt}</div>
-  </div>
+  <table width="560" cellpadding="0" cellspacing="0" border="0"
+         style="max-width:560px;width:100%;border-radius:14px;overflow:hidden;background:#ffffff">
 
-  <!-- Body -->
-  <div class="body">
+    <!-- ── HEADER ── -->
+    <tr>
+      <td bgcolor="#0a0a0a" style="padding:24px 32px">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td style="vertical-align:middle">
+              <table cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td width="40" height="40" align="center" valign="middle"
+                      style="background:#16a34a;border-radius:9px;font-size:20px;font-weight:900;color:#ffffff">
+                    U
+                  </td>
+                  <td style="padding-left:10px;vertical-align:middle">
+                    <div style="font-size:18px;font-weight:700;color:#ffffff">UrbanRide</div>
+                    <div style="font-size:11px;color:#6b7280;margin-top:2px">Premium Cab Service</div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+            <td align="right" style="vertical-align:middle">
+              <div style="font-size:10px;font-weight:700;letter-spacing:2px;color:#6b7280;text-transform:uppercase">Invoice</div>
+              <div style="font-size:20px;font-weight:800;color:#ffffff;margin-top:3px">${ref}</div>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
 
-    <!-- Passenger info -->
-    <div class="sec-lbl">Passenger Details</div>
-    <div class="grid2">
-      <div class="info-item">
-        <div class="lbl">Guest Name</div>
-        <div class="val">${booking.guest_name || '—'}</div>
-      </div>
-      <div class="info-item">
-        <div class="lbl">Phone</div>
-        <div class="val">${booking.phone || '—'}</div>
-      </div>
-      <div class="info-item">
-        <div class="lbl">Vehicle</div>
-        <div class="val">${booking.vehicle_type || '—'}</div>
-      </div>
-      <div class="info-item">
-        <div class="lbl">Passengers</div>
-        <div class="val">${booking.passengers || 1} pax</div>
-      </div>
-    </div>
+    <!-- ── GREEN STRIPE ── -->
+    <tr><td bgcolor="#16a34a" height="4" style="font-size:0;line-height:0">&nbsp;</td></tr>
 
-    <hr class="divider">
+    <!-- ── STATUS BAR ── -->
+    <tr>
+      <td bgcolor="#f9fafb" style="padding:12px 32px;border-bottom:1px solid #e5e7eb">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td style="vertical-align:middle">
+              <table cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td width="10" height="10" style="background:#16a34a;border-radius:50%;font-size:0">&nbsp;</td>
+                  <td style="padding-left:8px;font-size:12px;font-weight:700;color:#166534;text-transform:uppercase;letter-spacing:.5px">
+                    &#10003; Ride Completed
+                  </td>
+                </tr>
+              </table>
+            </td>
+            <td align="right" style="font-size:12px;color:#6b7280">${dt}</td>
+          </tr>
+        </table>
+      </td>
+    </tr>
 
-    <!-- Route -->
-    <div class="sec-lbl">Trip Route</div>
-    <div class="route-card">
-      <!-- Pickup -->
-      <div class="route-row">
-        <div class="route-icon">
-          <div class="dot-green"></div>
-          <div class="route-line"></div>
+    <!-- ── PASSENGER DETAILS ── -->
+    <tr>
+      <td style="padding:24px 32px 0">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#9ca3af;margin-bottom:16px">
+          Passenger Details
         </div>
-        <div>
-          <div class="route-label">Pickup</div>
-          <div class="route-addr">${booking.pickup || '—'}</div>
+        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td width="50%" style="padding-bottom:16px;vertical-align:top">
+              <div style="font-size:11px;color:#9ca3af;margin-bottom:3px">Guest Name</div>
+              <div style="font-size:14px;font-weight:600;color:#111827">${booking.guest_name || '—'}</div>
+            </td>
+            <td width="50%" style="padding-bottom:16px;vertical-align:top">
+              <div style="font-size:11px;color:#9ca3af;margin-bottom:3px">Phone</div>
+              <div style="font-size:14px;font-weight:600;color:#111827">${booking.phone || '—'}</div>
+            </td>
+          </tr>
+          <tr>
+            <td width="50%" style="vertical-align:top">
+              <div style="font-size:11px;color:#9ca3af;margin-bottom:3px">Vehicle</div>
+              <div style="font-size:14px;font-weight:600;color:#111827">${booking.vehicle_type || '—'}</div>
+            </td>
+            <td width="50%" style="vertical-align:top">
+              <div style="font-size:11px;color:#9ca3af;margin-bottom:3px">Passengers</div>
+              <div style="font-size:14px;font-weight:600;color:#111827">${booking.passengers || 1} pax</div>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- ── DIVIDER ── -->
+    <tr><td style="padding:0 32px"><div style="height:1px;background:#f3f4f6;margin:20px 0"></div></td></tr>
+
+    <!-- ── TRIP ROUTE ── -->
+    <tr>
+      <td style="padding:0 32px">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#9ca3af;margin-bottom:14px">
+          Trip Route
         </div>
-      </div>
-      <!-- Dropoff -->
-      <div class="route-row" style="margin-top:10px">
-        <div class="route-icon">
-          <div class="dot-black"></div>
-        </div>
-        <div>
-          <div class="route-label drop">Drop-off</div>
-          <div class="route-addr">${booking.dropoff || '—'}</div>
-        </div>
-      </div>
-    </div>
+        <table width="100%" cellpadding="0" cellspacing="0" border="0"
+               style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px">
+          <tr>
+            <td style="padding:16px 20px">
 
-    ${booking.associated_member ? `
-    <hr class="divider">
-    <div class="sec-lbl">Driver</div>
-    <div class="driver-row">
-      <div class="driver-avatar">${booking.associated_member.charAt(0).toUpperCase()}</div>
-      <div>
-        <div class="driver-name">${booking.associated_member}</div>
-        <div class="driver-sub">Your UrbanRide driver</div>
-      </div>
-    </div>` : ''}
+              <!-- Pickup row -->
+              <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                <tr>
+                  <td width="24" style="vertical-align:top;padding-top:4px">
+                    <table cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td width="10" height="10" align="center"
+                            style="background:#16a34a;border-radius:50%;font-size:0">&nbsp;</td>
+                      </tr>
+                      <tr>
+                        <td align="center" style="padding:3px 0">
+                          <div style="width:2px;height:22px;background:#d1d5db;margin:0 auto"></div>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                  <td style="padding-left:12px;vertical-align:top">
+                    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#16a34a;margin-bottom:3px">Pickup</div>
+                    <div style="font-size:13px;font-weight:600;color:#111827;line-height:1.4;padding-bottom:14px">${booking.pickup || '—'}</div>
+                  </td>
+                </tr>
+              </table>
 
-    <!-- Thank you -->
-    <div class="thankyou">
-      <div class="thankyou-title">Thank you for riding with UrbanRide! 🚗</div>
-      <div class="thankyou-sub">Your invoice is attached as a PDF for your records.</div>
-    </div>
-    <div class="pdf-note">📎 Invoice PDF attached — ${ref}</div>
+              <!-- Dropoff row -->
+              <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                <tr>
+                  <td width="24" style="vertical-align:top;padding-top:4px">
+                    <div style="width:10px;height:10px;background:#111827;border-radius:50%"></div>
+                  </td>
+                  <td style="padding-left:12px;vertical-align:top">
+                    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#374151;margin-bottom:3px">Drop-off</div>
+                    <div style="font-size:13px;font-weight:600;color:#111827;line-height:1.4">${booking.dropoff || '—'}</div>
+                  </td>
+                </tr>
+              </table>
 
-  </div>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
 
-  <!-- Footer -->
-  <div class="foot">
-    UrbanRide Technologies &nbsp;·&nbsp; This is an automated receipt &nbsp;·&nbsp; © 2026
-  </div>
+    <!-- ── DIVIDER ── -->
+    <tr><td style="padding:0 32px"><div style="height:1px;background:#f3f4f6;margin:20px 0"></div></td></tr>
 
-</div>
+    <!-- ── DRIVER (conditional) ── -->
+    ${driverRow}
+
+    <!-- ── THANK YOU ── -->
+    <tr>
+      <td style="padding:0 32px 8px">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0"
+               style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px">
+          <tr>
+            <td style="padding:16px 20px;text-align:center">
+              <div style="font-size:15px;font-weight:700;color:#166534">Thank you for riding with UrbanRide! 🚗</div>
+              <div style="font-size:12px;color:#16a34a;margin-top:4px">Your invoice PDF is attached for your records.</div>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- ── PDF NOTE ── -->
+    <tr>
+      <td style="padding:10px 32px 20px;text-align:center;font-size:11px;color:#9ca3af">
+        &#128206; Invoice PDF attached — ${ref}
+      </td>
+    </tr>
+
+    <!-- ── FOOTER ── -->
+    <tr>
+      <td bgcolor="#0a0a0a" style="padding:18px 32px;text-align:center;font-size:11px;color:#4b5563">
+        UrbanRide Technologies &nbsp;&middot;&nbsp; Automated receipt &nbsp;&middot;&nbsp; &copy; 2026
+      </td>
+    </tr>
+
+  </table>
+
+</td></tr>
+</table>
+
 </body>
 </html>`;
 }
