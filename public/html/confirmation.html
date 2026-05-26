@@ -110,7 +110,11 @@
 
   <!-- ── App script ──────────────────────────────────────── -->
   <script>
-    const BACKEND       = window.location.origin;
+    // Smart BACKEND: local dev → same Express server; production → Render
+    const BACKEND = ['localhost','127.0.0.1'].includes(window.location.hostname)
+      ? window.location.origin
+      : 'https://urbanride.onrender.com';
+
     const bookingId     = new URLSearchParams(window.location.search).get('booking_id');
     const statusBadge   = document.getElementById('vendor-status-badge');
     const acceptSound   = document.getElementById('accept-sound');
@@ -118,7 +122,7 @@
     const invoiceLink   = document.getElementById('downloadInvoice');
     const rtDot         = document.getElementById('rtDot');
     const rtLabel       = document.getElementById('rtLabel');
-    let   previousStatus = 'pending';
+    let   previousStatus = null;   // null so first applyStatus('pending') actually renders
 
     // ── Google Maps dark-style route ──────────────────────
     function showGoogleRoute(pickup, dropoff) {
@@ -195,20 +199,26 @@
     // ── Apply status to the badge UI ──────────────────────
     function applyStatus(status) {
       const s = (status || '').toLowerCase();
-      if (s === previousStatus) return;
+      if (s === previousStatus) return;  // no-op if nothing changed
       previousStatus = s;
 
-      // Remove all state classes
       statusBadge.className = '';
       invoiceLink.style.display = 'none';
 
       switch (s) {
         case 'accepted':
-          statusBadge.textContent  = '✅ Accepted';
-          statusBadge.className    = 'accepted';
-          invoiceLink.href         = `${BACKEND}/invoice/${bookingId}`;
+          statusBadge.textContent   = '✅ Accepted';
+          statusBadge.className     = 'accepted';
+          invoiceLink.href          = `${BACKEND}/invoice/${bookingId}`;
           invoiceLink.style.display = 'inline-block';
           acceptSound.play().catch(() => {});
+          break;
+
+        case 'completed':
+          statusBadge.textContent   = '✅ Ride Completed';
+          statusBadge.className     = 'accepted';
+          invoiceLink.href          = `${BACKEND}/invoice/${bookingId}`;
+          invoiceLink.style.display = 'inline-block';
           break;
 
         case 'rejected':
@@ -217,47 +227,53 @@
           rejectSound.play().catch(() => {});
           break;
 
+        case 'cancelled':
+          statusBadge.textContent = '🚫 Cancelled';
+          statusBadge.className   = 'rejected';
+          break;
+
         case 'open_market':
           statusBadge.textContent = '📤 Moved to Open Market';
           statusBadge.className   = 'open_market';
           break;
 
         default:
-          statusBadge.textContent = 'Pending…';
+          statusBadge.textContent = '⏳ Pending…';
       }
     }
 
     // ── Cancel booking ────────────────────────────────────
     document.getElementById('cancelBtn').addEventListener('click', () => {
       if (!confirm('Are you sure you want to cancel this ride?')) return;
-      fetch(`${BACKEND}/api/bookings/${bookingId}`, { method: 'DELETE' })
-        .then(res => {
+      // PATCH /cancel (not DELETE — that's a hard admin delete)
+      fetch(`${BACKEND}/api/bookings/${bookingId}/cancel`, { method: 'PATCH' })
+        .then(async res => {
           if (res.ok) {
-            alert('Booking cancelled.');
-            window.location.href = '/html/index.html';
+            applyStatus('cancelled');
+            document.getElementById('cancelBtn').disabled = true;
           } else {
-            alert('Failed to cancel — please try again.');
+            const { error } = await res.json().catch(() => ({}));
+            alert(error || 'Failed to cancel — please try again.');
           }
         })
         .catch(() => alert('Network error cancelling booking.'));
     });
 
     // ── Socket.io — real-time vendor status push ──────────
-    // Replaces the old setInterval polling (every 3 s) with a persistent
-    // WebSocket connection. Server emits 'status_update' the instant the
-    // vendor taps Accept / Reject / Open Market on Telegram.
     function connectSocket() {
       const socket = io(BACKEND, { transports: ['websocket', 'polling'] });
+
+      function joinRoom() {
+        socket.emit('join_booking', bookingId);
+      }
 
       socket.on('connect', () => {
         rtDot.classList.add('connected');
         rtLabel.textContent = 'Live updates active';
-        // Join the room for this specific booking
-        socket.emit('join_booking', bookingId);
+        joinRoom();   // (re)join room on every connect / reconnect
       });
 
       socket.on('status_update', (data) => {
-        console.log('📡 Real-time status update:', data);
         if (String(data.bookingId) === String(bookingId)) {
           applyStatus(data.status);
         }
@@ -268,19 +284,18 @@
         rtLabel.textContent = 'Reconnecting…';
       });
 
-      socket.on('connect_error', (err) => {
-        console.warn('Socket connection error:', err.message);
+      socket.on('connect_error', () => {
         rtDot.classList.remove('connected');
-        rtLabel.textContent = 'Connection issue — polling fallback active';
-        // Fallback: poll every 5 s if socket is unavailable
-        startPollingFallback();
+        rtLabel.textContent = 'Connection issue — polling active';
       });
     }
 
-    // ── HTTP poll fallback (only if WebSocket fails) ──────
+    // ── HTTP poll fallback — always running every 6 s ─────
+    // Catches cases where the socket room was missed or the
+    // page was opened after the vendor already responded.
     let pollingInterval = null;
     function startPollingFallback() {
-      if (pollingInterval) return;   // already started
+      if (pollingInterval) return;
       pollingInterval = setInterval(async () => {
         try {
           const res  = await fetch(`${BACKEND}/booking-status/${bookingId}`);
@@ -296,8 +311,9 @@
         document.getElementById('info').textContent = 'No booking ID in URL.';
         return;
       }
-      fetchBookingDetails();
-      connectSocket();
+      fetchBookingDetails();   // render current DB status immediately
+      connectSocket();          // real-time push via WebSocket
+      startPollingFallback();  // always-on 6 s poll as safety net
     });
   </script>
 </body>

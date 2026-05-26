@@ -188,7 +188,9 @@
        SCRIPTS
   ══════════════════════════════════════════════════════ -->
   <script>
-    const BACKEND = window.location.origin;
+    const BACKEND = ['localhost','127.0.0.1'].includes(window.location.hostname)
+      ? window.location.origin
+      : 'https://urbanride.onrender.com';
 
     // ── Firebase init ─────────────────────────────────────
     firebase.initializeApp({

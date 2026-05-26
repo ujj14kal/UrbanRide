@@ -131,7 +131,9 @@
        SCRIPTS
   ════════════════════════════════════════════ -->
   <script>
-    const BACKEND = window.location.origin;   // works for both localhost and Render
+    const BACKEND = ['localhost','127.0.0.1'].includes(window.location.hostname)
+      ? window.location.origin
+      : 'https://urbanride.onrender.com';
     let token          = '';
     let socket         = null;
     let pollTimer      = null;
